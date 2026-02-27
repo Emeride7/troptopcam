@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestion Maintenance Caméras</title>
+  <link rel="stylesheet" href="../assets/css/shared.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="/" class="nav-brand">📋 Suite Pro</a>
+      <ul class="nav-links">
+        <li><a href="/">Accueil</a></li>
+        <li><a href="../maintenance/" class="active">Maintenance</a></li>
+        <li><a href="../proforma/">Facturation</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main>
+    <div class="header">
+      <h1>📹 Gestionnaire de Maintenance des Caméras</h1>
+      <p>Système de gestion et de suivi des caméras de surveillance</p>
+    </div>
+
+    <div class="main-content">
+      <div class="panel">
+        <h2>➕ Ajouter / Modifier Caméra</h2>
+        <form id="cameraForm">
+          <input type="hidden" id="cameraId" value="">
+          <div class="form-group">
+            <label for="cameraName">Nom de la caméra</label>
+            <input type="text" id="cameraName" placeholder="ex: Camera 1" required>
+          </div>
+          <div class="form-group">
+            <label for="emplacement">Emplacement</label>
+            <select id="emplacement" required>
+              <option value="">Sélectionner un emplacement</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="etat">État</label>
+            <select id="etat" required>
+              <option value="Bon">Bon</option>
+              <option value="Pas Bon">Pas Bon</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="probleme">Problème identifié</label>
+            <select id="probleme">
+              <option value="">Sélectionner un problème</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="action">Actions recommandées</label>
+            <select id="action">
+              <option value="">Sélectionner une action</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary">💾 Enregistrer la caméra</button>
+        </form>
+
+        <div class="config-section">
+          <h3>⚙️ Configuration des listes</h3>
+          
+          <div class="form-group">
+            <label>Nouvel emplacement</label>
+            <div style="display: flex; gap: 5px;">
+              <input type="text" id="newEmplacement" placeholder="ex: Toit">
+              <button onclick="addEmplacement()" class="btn btn-secondary">➕</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Nouveau problème</label>
+            <div style="display: flex; gap: 5px;">
+              <input type="text" id="newProbleme" placeholder="ex: Problème de connexion">
+              <button onclick="addProbleme()" class="btn btn-secondary">➕</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Nouvelle action</label>
+            <div style="display: flex; gap: 5px;">
+              <input type="text" id="newAction" placeholder="ex: Réparation urgente">
+              <button onclick="addAction()" class="btn btn-secondary">➕</button>
+            </div>
+          </div>
+
+          <button onclick="resetToDefault()" class="btn btn-warning">🔄 Réinitialiser les données par défaut</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="stats-container">
+          <div class="stat-card total">
+            <h3>📊 TOTAL CAMÉRAS</h3>
+            <div class="number" id="totalCameras">0</div>
+          </div>
+          <div class="stat-card fonctionnelle">
+            <h3>✅ FONCTIONNELLES</h3>
+            <div class="number" id="totalFonctionnelles">0</div>
+          </div>
+          <div class="stat-card non-fonctionnelle">
+            <h3>❌ NON FONCTIONNELLES</h3>
+            <div class="number" id="totalNonFonctionnelles">0</div>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table id="camerasTable">
+            <thead>
+              <tr>
+                <th>CAMÉRA</th>
+                <th>EMPLACEMENT</th>
+                <th>ÉTAT</th>
+                <th>PROBLÈME IDENTIFIÉ</th>
+                <th>ACTIONS RECOMMANDÉES</th>
+                <th>ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody id="camerasTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>Les données sont automatiquement sauvegardées dans votre navigateur</p>
+  </footer>
+
+  <div class="save-status" id="saveStatus">✅ Données sauvegardées avec succès !</div>
+
+  <script src="../assets/js/shared.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

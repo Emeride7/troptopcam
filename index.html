@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Suite de gestion professionnelle</title>
+  <link rel="stylesheet" href="assets/css/shared.css">
+  <style>
+    .hero {
+      text-align: center;
+      padding: 3rem 1rem;
+      background: linear-gradient(135deg, #1e3c72, #2a5298);
+      color: white;
+      border-radius: 0 0 20px 20px;
+      margin-bottom: 2rem;
+    }
+    .hero h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .cards {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 2rem;
+      padding: 1rem;
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      width: 320px;
+      padding: 1.5rem;
+      text-align: center;
+      transition: transform 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-5px);
+    }
+    .card h2 {
+      color: #1e3c72;
+      margin-bottom: 1rem;
+    }
+    .card p {
+      color: #555;
+      margin-bottom: 1.5rem;
+    }
+    .btn {
+      display: inline-block;
+      background: #2a5298;
+      color: white;
+      padding: 0.7rem 1.5rem;
+      border-radius: 30px;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .btn:hover {
+      background: #1e3c72;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="/" class="nav-brand">📋 Suite Pro</a>
+      <ul class="nav-links">
+        <li><a href="/">Accueil</a></li>
+        <li><a href="maintenance/">Maintenance</a></li>
+        <li><a href="proforma/">Facturation</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main>
+    <div class="hero">
+      <h1>Suite de gestion professionnelle</h1>
+      <p>Deux applications puissantes pour gérer votre maintenance et votre facturation</p>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <h2>📹 Maintenance Caméras</h2>
+        <p>Suivez l'état de vos caméras, planifiez les interventions et générez des rapports.</p>
+        <a href="maintenance/" class="btn">Accéder</a>
+      </div>
+      <div class="card">
+        <h2>🧾 Pro forma / Facture</h2>
+        <p>Créez rapidement des devis, pro forma et factures, exportez en PDF ou Excel.</p>
+        <a href="proforma/" class="btn">Accéder</a>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>&copy; 2026 Suite Pro - Tous droits réservés</p>
+  </footer>
+</body>
+</html>

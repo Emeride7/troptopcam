@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Générateur Pro Forma / Facture</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/shared.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="/" class="nav-brand">📋 Suite Pro</a>
+      <ul class="nav-links">
+        <li><a href="/">Accueil</a></li>
+        <li><a href="../maintenance/">Maintenance</a></li>
+        <li><a href="../proforma/" class="active">Facturation</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Toolbar spécifique -->
+  <div class="toolbar" role="banner" aria-label="Barre d'actions">
+    <span class="brand">PRO FORMA / FACTURE</span>
+    <div class="mode-switcher" role="tablist" aria-label="Type de document">
+      <button type="button" class="mode-btn active" id="btnProforma" role="tab" aria-selected="true" data-mode="proforma">PRO FORMA</button>
+      <button type="button" class="mode-btn" id="btnFacture" role="tab" aria-selected="false" data-mode="facture">FACTURE</button>
+    </div>
+    <div class="toolbar-actions" aria-label="Actions">
+      <button type="button" class="btn-history-open" id="btnHistory">Historique</button>
+      <button type="button" class="btn-save" id="btnArchive">Sauvegarder</button>
+      <button type="button" class="btn-new-doc" id="btnNew">Nouveau</button>
+      <button type="button" class="btn-pdf" id="btnPdf">PDF</button>
+      <button type="button" class="btn-excel" id="btnExcel">Excel</button>
+    </div>
+  </div>
+
+  <main>
+    <div class="invoice-card" id="invoiceCard" aria-label="Document">
+      <div class="invoice-header">
+        <div class="header-left">
+          <div class="logo-wrapper" aria-label="Logo">
+            <img id="logoPreview" src="#" alt="Logo" />
+            <div class="logo-placeholder" id="logoPlaceholder"><span>Cliquer<br>pour logo</span></div>
+            <input type="file" id="logoUpload" accept="image/*" class="logo-upload-input" aria-label="Importer un logo" />
+          </div>
+          <div class="emitter-info" aria-label="Émetteur">
+            <input type="text" class="header-input company-name-input" id="emitterName" placeholder="Nom de l'entreprise" autocomplete="organization" />
+            <input type="text" class="header-input" id="emitterAddress" placeholder="Adresse" autocomplete="street-address" />
+            <input type="text" class="header-input" id="emitterExtra" placeholder="Complément d'adresse" />
+            <input type="tel" class="header-input" id="emitterTel" placeholder="Téléphone" autocomplete="tel" />
+          </div>
+        </div>
+        <div class="header-right" aria-label="Références">
+          <div class="doc-title-display" id="docTitle">PRO FORMA</div>
+          <div class="ref-grid">
+            <div class="ref-field">
+              <label for="docNumber">N°</label>
+              <input type="text" class="ref-input" id="docNumber" placeholder="N° de document" inputmode="text" />
+            </div>
+            <div class="ref-field">
+              <label for="docDate">Date</label>
+              <input type="date" class="ref-input" id="docDate" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="invoice-body">
+        <div class="section-title">Destinataire</div>
+        <div class="section-client" aria-label="Client">
+          <div class="client-label" id="clientSectionLabel">CLIENT</div>
+          <div class="client-inputs">
+            <input type="text" class="form-input full" id="clientName" placeholder="Nom du client" autocomplete="name" list="clientDatalist" />
+            <input type="text" class="form-input" id="clientAddress" placeholder="Adresse" autocomplete="street-address" />
+            <input type="text" class="form-input" id="clientExtra" placeholder="Complément d'adresse" />
+            <input type="text" class="form-input" id="clientIfu" placeholder="IFU (optionnel)" />
+          </div>
+        </div>
+
+        <div class="section-title">Détail des prestations</div>
+        <div class="table-wrap" aria-label="Lignes">
+          <table class="items-table" id="itemsTable">
+            <thead>
+              <tr>
+                <th style="width:45%">Description</th>
+                <th style="width:12%">Quantité</th>
+                <th style="width:18%">Prix unitaire HT</th>
+                <th style="width:18%">Total HT</th>
+                <th style="width:7%"></th>
+              </tr>
+            </thead>
+            <tbody id="itemsBody"></tbody>
+          </table>
+        </div>
+        <button type="button" class="btn-add-row" id="addRow">Ajouter une ligne</button>
+
+        <div class="totals-section">
+          <div class="controls-col" aria-label="Paramètres">
+            <div class="inline-field">
+              <label for="vatRate">TVA (%)</label>
+              <input type="number" id="vatRate" value="18" min="0" step="0.1" inputmode="decimal" />
+            </div>
+            <div class="inline-field">
+              <label for="currency">Devise</label>
+              <input type="text" id="currency" value="CFA" maxlength="10" />
+            </div>
+          </div>
+          <div class="totals-box" aria-label="Totaux">
+            <table>
+              <tr>
+                <td class="label-cell">Sous-total HT</td>
+                <td class="amount-cell"><span id="subtotal">0,00</span> <span class="curr">CFA</span></td>
+              </tr>
+              <tr id="vatRow">
+                <td class="label-cell">TVA (<span id="vatRateDisplay">18</span>%)</td>
+                <td class="amount-cell"><span id="totalTax">0,00</span> <span class="curr">CFA</span></td>
+              </tr>
+              <tr class="divider grand-row">
+                <td class="label-cell">Total TTC</td>
+                <td class="amount-cell"><span id="grandTotal">0,00</span> <span class="curr">CFA</span></td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="invoice-footer">
+        <div class="signature-block">
+          <div class="sig-label">Signature</div>
+          <div class="sig-line">Nom &amp; Cachet</div>
+        </div>
+        <div class="footer-note">
+          <div>Document généré automatiquement</div>
+          <div id="footerBrand" style="font-weight:800; color: var(--secondary); margin-top:3px">Votre entreprise</div>
+        </div>
+      </div>
+    </div>
+    <div class="text-muted small text-center mt-2">Sauvegarde automatique activée (localStorage)</div>
+  </main>
+
+  <!-- Historique -->
+  <div class="history-overlay" id="historyOverlay" aria-hidden="true">
+    <div class="history-panel" role="dialog" aria-modal="true" aria-label="Historique">
+      <div class="history-panel-header">
+        <span>Historique des documents</span>
+        <button type="button" id="btnCloseHistory" aria-label="Fermer">✕</button>
+      </div>
+      <div class="history-tools">
+        <input type="search" id="historySearch" placeholder="Rechercher (n°, client, date…)" />
+      </div>
+      <div class="history-list" id="historyList"></div>
+    </div>
+  </div>
+
+  <div class="toast-notification" id="toast" role="status" aria-live="polite"></div>
+
+  <footer>
+    <p>Application de facturation professionnelle</p>
+  </footer>
+
+  <script src="../assets/js/shared.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
