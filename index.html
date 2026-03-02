@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Suite de gestion professionnelle</title>
+  <title>ProGestion - Accueil</title>
+  <!-- Favicon (icône caméra en data URI) -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%231e3c72'%3E%3Cpath d='M12 4.5C7 4.5 2.7 7.6 1 12c1.7 4.4 6 7.5 11 7.5s9.3-3.1 11-7.5c-1.7-4.4-6-7.5-11-7.5zM12 17c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5zm0-8c-1.7 0-3 1.3-3 3s1.3 3 3 3 3-1.3 3-3-1.3-3-3-3z'/%3E%3C/svg%3E" type="image/svg+xml">
   <link rel="stylesheet" href="assets/css/shared.css">
   <style>
     .hero {
@@ -18,81 +20,147 @@
       font-size: 2.5rem;
       margin-bottom: 0.5rem;
     }
+    .hero p {
+      font-size: 1.2rem;
+      opacity: 0.9;
+    }
     .cards {
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
       gap: 2rem;
       padding: 1rem;
+      margin-bottom: 2rem;
     }
     .card {
       background: white;
       border-radius: 16px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-      width: 320px;
+      width: 340px;
       padding: 1.5rem;
       text-align: center;
-      transition: transform 0.2s;
+      transition: transform 0.2s, box-shadow 0.2s;
+      text-decoration: none;
+      color: inherit;
+      display: block;
     }
     .card:hover {
-      transform: translateY(-5px);
+      transform: translateY(-6px);
+      box-shadow: 0 20px 40px rgba(30,60,114,0.2);
     }
     .card h2 {
       color: #1e3c72;
       margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
     }
     .card p {
       color: #555;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1rem;
+      line-height: 1.6;
     }
-    .btn {
+    .features {
+      text-align: left;
+      margin-top: 1rem;
+      border-top: 1px solid #eee;
+      padding-top: 1rem;
+      font-size: 0.9rem;
+      color: #666;
+    }
+    .features i {
+      color: #2a5298;
+      width: 20px;
+      margin-right: 0.5rem;
+    }
+    .features div {
+      margin-bottom: 0.4rem;
+    }
+    .card .btn {
       display: inline-block;
       background: #2a5298;
       color: white;
-      padding: 0.7rem 1.5rem;
+      padding: 0.6rem 1.5rem;
       border-radius: 30px;
-      text-decoration: none;
       font-weight: 600;
+      margin-top: 1rem;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s;
     }
-    .btn:hover {
+    .card .btn:hover {
       background: #1e3c72;
+    }
+    /* Footer unifié avec les modules */
+    footer {
+      background: #2c3e50;
+      color: white;
+      text-align: center;
+      padding: 1rem;
+      font-size: 0.9rem;
+      margin-top: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+    footer i {
+      color: #22c55e;
     }
   </style>
 </head>
 <body>
   <nav class="navbar">
     <div class="nav-container">
-      <a href="/" class="nav-brand">📋 Suite Pro</a>
+      <a href="/" class="nav-brand"><i class="fas fa-camera-retro"></i> ProGestion</a>
       <ul class="nav-links">
-        <li><a href="/">Accueil</a></li>
-        <li><a href="maintenance/">Maintenance</a></li>
-        <li><a href="proforma/">Facturation</a></li>
+        <li><a href="/" class="active"><i class="fas fa-home"></i> Accueil</a></li>
+        <li><a href="maintenance/"><i class="fas fa-tools"></i> Maintenance</a></li>
+        <li><a href="proforma/"><i class="fas fa-file-invoice"></i> Facturation</a></li>
       </ul>
     </div>
   </nav>
 
   <main>
     <div class="hero">
-      <h1>Suite de gestion professionnelle</h1>
+      <h1><i class="fas fa-camera-retro"></i> ProGestion</h1>
       <p>Deux applications puissantes pour gérer votre maintenance et votre facturation</p>
     </div>
 
     <div class="cards">
-      <div class="card">
-        <h2>📹 Maintenance Caméras</h2>
-        <p>Suivez l'état de vos caméras, planifiez les interventions et générez des rapports.</p>
-        <a href="maintenance/" class="btn">Accéder</a>
-      </div>
-      <div class="card">
-        <h2>🧾 Pro forma / Facture</h2>
-        <p>Créez rapidement des devis, pro forma et factures, exportez en PDF ou Excel.</p>
-        <a href="proforma/" class="btn">Accéder</a>
-      </div>
+      <!-- Carte Maintenance -->
+      <a href="maintenance/" class="card">
+        <h2><i class="fas fa-tools"></i> Maintenance</h2>
+        <p>Suivez l'état de vos équipements, planifiez les interventions et générez des rapports détaillés.</p>
+        <div class="features">
+          <div><i class="fas fa-check-circle"></i> Gestion des équipements par emplacement</div>
+          <div><i class="fas fa-check-circle"></i> Suivi des pannes et actions</div>
+          <div><i class="fas fa-check-circle"></i> Statistiques en temps réel</div>
+          <div><i class="fas fa-check-circle"></i> Export PDF professionnel</div>
+        </div>
+        <span class="btn"><i class="fas fa-arrow-right"></i> Accéder</span>
+      </a>
+
+      <!-- Carte Facturation -->
+      <a href="proforma/" class="card">
+        <h2><i class="fas fa-file-invoice"></i> Facturation</h2>
+        <p>Créez rapidement des devis, pro forma et factures, personnalisez avec votre logo et exportez.</p>
+        <div class="features">
+          <div><i class="fas fa-check-circle"></i> Mode proforma / facture</div>
+          <div><i class="fas fa-check-circle"></i> Calcul automatique TVA</div>
+          <div><i class="fas fa-check-circle"></i> Sauvegarde et historique</div>
+          <div><i class="fas fa-check-circle"></i> Export PDF et Excel</div>
+        </div>
+        <span class="btn"><i class="fas fa-arrow-right"></i> Accéder</span>
+      </a>
     </div>
   </main>
 
   <footer>
-    <p>&copy; 2026 Suite Pro - Tous droits réservés</p>
+    <i class="fas fa-save"></i> Données sauvegardées automatiquement
   </footer>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </body>
 </html>

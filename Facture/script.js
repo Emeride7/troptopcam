@@ -14,10 +14,12 @@
     mode: 'proforma',
     logoDataURL: null,
     draftId: uid(),
-    _saveTimer: null
+    _saveTimer: null,
+    lastFocused: null,
+    archiveButtonDisabled: false
   };
 
-  // Références DOM
+  // Références DOM (uniquement les éléments existants)
   const refs = {
     btnHistory: $('#btnHistory'),
     btnArchive: $('#btnArchive'),
@@ -205,15 +207,18 @@
   function normalizeDocNumber(raw, mode) {
     const wantedPrefix = mode === 'facture' ? 'F' : 'PF';
     const cleaned = raw.replace(/\s+/g, '').replace(/_/g, '-');
-    const m = /^(PF|F)-?(\d{4})-?(\d{1,6})$/i.exec(cleaned);
+    const m = /^(PF|F)[-\s]?(\d{4})[-\s]?(\d{1,6})$/i.exec(cleaned);
     if (m) {
-      return `${wantedPrefix}-${m[2]}-${pad3(m[3])}`;
+      return `${m[1].toUpperCase()}-${m[2]}-${pad3(m[3])}`;
     }
     return raw;
   }
 
   function generateNextNumber(mode) {
-    const counters = storage.get(STORAGE.counters, {});
+    let counters = storage.get(STORAGE.counters, {});
+    if (typeof counters !== 'object' || counters === null) {
+      counters = {};
+    }
     const year = getYearForCounter();
     const key = `${mode}-${year}`;
     const next = (counters[key] || 0) + 1;
@@ -262,7 +267,11 @@
 
   function applyData(data) {
     state.draftId = data?.id || uid();
+    
+    refs.docNumber.value = data?.docNumber || '';
     setMode(data?.mode || 'proforma');
+    
+    refs.docDate.value = data?.docDate || todayISO();
 
     refs.emitterName.value = data?.emitter?.name || '';
     refs.emitterAddress.value = data?.emitter?.address || '';
@@ -273,9 +282,6 @@
     refs.clientAddress.value = data?.client?.address || '';
     refs.clientExtra.value = data?.client?.extra || '';
     refs.clientIfu.value = data?.client?.ifu || '';
-
-    refs.docNumber.value = data?.docNumber || generateNextNumber(state.mode);
-    refs.docDate.value = data?.docDate || todayISO();
 
     refs.currency.value = data?.currency || 'CFA';
     refs.vatRate.value = data?.vatRate ?? 18;
@@ -361,6 +367,7 @@
   }
 
   function openHistory() {
+    state.lastFocused = document.activeElement;
     renderHistory();
     refs.historyOverlay.classList.add('open');
     refs.historyOverlay.setAttribute('aria-hidden', 'false');
@@ -371,6 +378,10 @@
   function closeHistory() {
     refs.historyOverlay.classList.remove('open');
     refs.historyOverlay.setAttribute('aria-hidden', 'true');
+    if (state.lastFocused) {
+      state.lastFocused.focus();
+      state.lastFocused = null;
+    }
   }
 
   function historyMatches(item, q) {
@@ -539,7 +550,9 @@
         const type = (mime === 'image/png') ? 'PNG' : 'JPEG';
         doc.addImage(state.logoDataURL, type, margin, 8, 28, 28, undefined, 'FAST');
         logoEndX = margin + 32;
-      } catch { /* ignorer */ }
+      } catch (e) {
+        showToast('Le logo n’a pas pu être intégré au PDF.', 'warning');
+      }
     }
 
     doc.setTextColor(255, 255, 255);
@@ -728,7 +741,13 @@
   function newDocument() {
     if (!confirm('Créer un nouveau document ?\n\nOK : sauvegarde l\'actuel dans l\'historique puis repart à zéro.')) return;
 
-    archiveCurrentDocument({ silent: true });
+    const current = collectData();
+    const hasContent = current.items.some(it => it.description.trim() !== '' || (it.qty > 0 && it.price > 0)) 
+                    || current.client.name.trim() !== '';
+    if (hasContent) {
+      archiveCurrentDocument({ silent: true });
+    }
+
     storage.remove(STORAGE.draft);
 
     state.draftId = uid();
@@ -773,10 +792,15 @@
       if (clients.length > 50) clients.pop();
     }
 
+    const seenDescriptions = new Set();
     for (const tr of refs.itemsBody.rows) {
       const desc = tr.querySelector('[data-field="description"]').value.trim();
+      if (!desc) continue;
+      if (seenDescriptions.has(desc)) continue;
+      seenDescriptions.add(desc);
+
       const price = clampNumber(tr.querySelector('[data-field="price"]').value);
-      if (desc && price > 0) {
+      if (price > 0) {
         const itemData = { description: desc, price };
         const idx = items.findIndex(i => i.description.toLowerCase() === desc.toLowerCase());
         if (idx >= 0) items[idx] = itemData;
@@ -881,8 +905,21 @@
     refs.btnProforma.addEventListener('click', () => setMode('proforma'));
     refs.btnFacture.addEventListener('click', () => setMode('facture'));
 
-    refs.btnHistory.addEventListener('click', openHistory);
-    refs.btnArchive.addEventListener('click', () => archiveCurrentDocument());
+    refs.btnHistory.addEventListener('click', () => {
+      if (refs.historyOverlay.classList.contains('open')) {
+        closeHistory();
+      } else {
+        openHistory();
+      }
+    });
+
+    refs.btnArchive.addEventListener('click', () => {
+      if (state.archiveButtonDisabled) return;
+      state.archiveButtonDisabled = true;
+      archiveCurrentDocument();
+      setTimeout(() => { state.archiveButtonDisabled = false; }, 1000);
+    });
+
     refs.btnNew.addEventListener('click', newDocument);
     refs.btnPdf.addEventListener('click', exportPDF);
     refs.btnExcel.addEventListener('click', exportExcel);
@@ -893,7 +930,10 @@
     });
     refs.historySearch.addEventListener('input', renderHistory);
 
-    refs.addRow.addEventListener('click', () => addItemRow({ id: uid(), description: '', qty: 1, price: 0 }, { focus: true }));
+    // Bouton Ajouter une ligne
+    refs.addRow.addEventListener('click', () => {
+      addItemRow({ id: uid(), description: '', qty: 1, price: 0 }, { focus: true });
+    });
 
     refs.itemsBody.addEventListener('input', (e) => {
       const field = e.target?.getAttribute?.('data-field');
