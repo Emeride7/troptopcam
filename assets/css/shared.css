@@ -10,11 +10,12 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  transition: background-color 0.2s, color 0.2s;
 }
 
 /* Navbar unifiée */
 .navbar {
-  background: #1e3c72;
+  background: var(--primary, #1e3c72);
   color: white;
   padding: 0.8rem 2rem;
   box-shadow: 0 2px 12px rgba(0,0,0,.25);
@@ -44,6 +45,7 @@ body {
   list-style: none;
   display: flex;
   gap: 1.5rem;
+  align-items: center;
 }
 
 .nav-links a {
@@ -63,6 +65,41 @@ body {
 .nav-links a.active {
   background: rgba(255,255,255,0.2);
   color: white;
+}
+
+/* Sélecteur de couleur */
+.color-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: 1rem;
+  background: rgba(255,255,255,0.15);
+  padding: 0.3rem 0.8rem;
+  border-radius: 30px;
+}
+
+.color-picker label {
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.color-picker input[type="color"] {
+  width: 30px;
+  height: 30px;
+  border: 2px solid white;
+  border-radius: 50%;
+  cursor: pointer;
+  background: none;
+  padding: 0;
+}
+
+.color-picker input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+.color-picker input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 50%;
 }
 
 /* Footer */
