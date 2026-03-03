@@ -604,4 +604,32 @@ footer {
   .nav-links {
     gap: 1rem;
   }
+
+}
+/* Poignée de déplacement */
+.drag-handle {
+  width: 30px;
+  cursor: grab;
+  color: var(--text-light);
+  text-align: center;
+  user-select: none;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+/* Lors du drag, la ligne est semi-transparente */
+tr[draggable="true"] {
+  transition: opacity 0.2s;
+}
+
+tr[draggable="true"]:hover {
+  background: var(--accent);
+}
+
+/* Ajustement des largeurs des colonnes */
+#camerasTable th:first-child,
+#camerasTable td:first-child {
+  width: 30px;
 }
