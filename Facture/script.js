@@ -19,7 +19,7 @@
     archiveButtonDisabled: false
   };
 
-  // Références DOM (uniquement les éléments existants)
+  // Références DOM
   const refs = {
     btnHistory: $('#btnHistory'),
     btnArchive: $('#btnArchive'),
@@ -71,11 +71,12 @@
     showToast._timer = setTimeout(() => t.classList.remove('show'), duration);
   }
 
-  // Création d'une ligne d'article
+  // Création d'une ligne d'article avec note
   function createItemRow(item) {
     const tr = document.createElement('tr');
     tr.dataset.itemId = item.id || uid();
 
+    // Colonne Description
     const tdDesc = document.createElement('td');
     const inpDesc = document.createElement('input');
     inpDesc.type = 'text';
@@ -86,6 +87,17 @@
     inpDesc.setAttribute('data-field', 'description');
     tdDesc.appendChild(inpDesc);
 
+    // Colonne Note (AJOUT NOTE)
+    const tdNote = document.createElement('td');
+    const inpNote = document.createElement('input');
+    inpNote.type = 'text';
+    inpNote.className = 'item-input';
+    inpNote.placeholder = 'Note (optionnelle)';
+    inpNote.value = item.note || '';
+    inpNote.setAttribute('data-field', 'note');
+    tdNote.appendChild(inpNote);
+
+    // Colonne Quantité
     const tdQty = document.createElement('td');
     const inpQty = document.createElement('input');
     inpQty.type = 'number';
@@ -97,6 +109,7 @@
     inpQty.setAttribute('data-field', 'qty');
     tdQty.appendChild(inpQty);
 
+    // Colonne Prix
     const tdPrice = document.createElement('td');
     const inpPrice = document.createElement('input');
     inpPrice.type = 'number';
@@ -108,10 +121,12 @@
     inpPrice.setAttribute('data-field', 'price');
     tdPrice.appendChild(inpPrice);
 
+    // Colonne Total HT
     const tdTotal = document.createElement('td');
     tdTotal.className = 'line-total-cell';
     tdTotal.textContent = fmtMoney.format(clampNumber(item.qty) * clampNumber(item.price));
 
+    // Colonne Actions
     const tdActions = document.createElement('td');
     const btnDel = document.createElement('button');
     btnDel.type = 'button';
@@ -120,11 +135,11 @@
     btnDel.setAttribute('data-action', 'remove-row');
     tdActions.appendChild(btnDel);
 
-    tr.append(tdDesc, tdQty, tdPrice, tdTotal, tdActions);
+    tr.append(tdDesc, tdNote, tdQty, tdPrice, tdTotal, tdActions); // AJOUT NOTE
     return tr;
   }
 
-  function addItemRow(item = { id: uid(), description: '', qty: 1, price: 0 }, { focus = false } = {}) {
+  function addItemRow(item = { id: uid(), description: '', note: '', qty: 1, price: 0 }, { focus = false } = {}) {
     const row = createItemRow(item);
     refs.itemsBody.appendChild(row);
     if (focus) row.querySelector('input')?.focus();
@@ -134,11 +149,11 @@
 
   function ensureAtLeastOneRow() {
     if (refs.itemsBody.children.length === 0) {
-      addItemRow({ id: uid(), description: '', qty: 1, price: 0 });
+      addItemRow({ id: uid(), description: '', note: '', qty: 1, price: 0 });
     }
   }
 
-  // Calculs
+  // Calculs (inchangés car la note n'affecte pas les totaux)
   function computeSubtotal() {
     let subtotal = 0;
     for (const tr of refs.itemsBody.rows) {
@@ -176,7 +191,7 @@
     $$('.curr').forEach(el => el.textContent = curr);
   }
 
-  // Mode et numérotation
+  // Mode et numérotation (inchangé)
   function setMode(mode) {
     state.mode = mode;
     refs.docTitle.textContent = mode === 'facture' ? 'FACTURE' : 'PRO FORMA';
@@ -228,13 +243,14 @@
     return `${prefix}-${year}-${pad3(next)}`;
   }
 
-  // Collecte et application des données
+  // Collecte des données (avec note)
   function collectData() {
     const items = [];
     for (const tr of refs.itemsBody.rows) {
       items.push({
         id: tr.dataset.itemId || uid(),
         description: tr.querySelector('[data-field="description"]').value || '',
+        note: tr.querySelector('[data-field="note"]').value || '', // AJOUT NOTE
         qty: clampNumber(tr.querySelector('[data-field="qty"]').value),
         price: clampNumber(tr.querySelector('[data-field="price"]').value)
       });
@@ -265,6 +281,7 @@
     };
   }
 
+  // Application des données (avec note)
   function applyData(data) {
     state.draftId = data?.id || uid();
     
@@ -304,7 +321,7 @@
     if (items.length) {
       items.forEach(it => refs.itemsBody.appendChild(createItemRow(it)));
     } else {
-      addItemRow({ id: uid(), description: '', qty: 1, price: 0 });
+      addItemRow({ id: uid(), description: '', note: '', qty: 1, price: 0 });
     }
 
     updateCurrencyDisplay();
@@ -313,7 +330,7 @@
     renderItemDatalist();
   }
 
-  // Sauvegarde automatique
+  // Sauvegarde automatique (inchangée)
   function scheduleSave() {
     clearTimeout(state._saveTimer);
     state._saveTimer = setTimeout(saveDraft, 450);
@@ -339,11 +356,11 @@
       docNumber: generateNextNumber('proforma'),
       vatRate: 18,
       currency: 'CFA',
-      items: [{ id: uid(), description: '', qty: 1, price: 0 }]
+      items: [{ id: uid(), description: '', note: '', qty: 1, price: 0 }]
     });
   }
 
-  // Historique
+  // Historique (inchangé)
   function getHistory() {
     const hist = storage.get(STORAGE.history, []);
     return Array.isArray(hist) ? hist : [];
@@ -489,7 +506,7 @@
     showToast('🗑 Document supprimé', 'success');
   }
 
-  // Validation avant export
+  // Validation avant export (inchangée)
   function validateBeforeExport() {
     if (!refs.docDate.value) refs.docDate.value = todayISO();
 
@@ -517,7 +534,7 @@
     return true;
   }
 
-  // Export PDF
+  // Export PDF avec note
   function cleanSpaces(str) {
     return String(str).replace(/[\s\u00A0\u202F\u2000-\u200A]/g, ' ');
   }
@@ -600,17 +617,19 @@
 
     y += 42;
 
+    // Construction du tableau avec note
     const tableData = [];
     for (const tr of refs.itemsBody.rows) {
       const desc = tr.querySelector('[data-field="description"]').value || '';
+      const note = tr.querySelector('[data-field="note"]').value || ''; // AJOUT NOTE
       const qty = clampNumber(tr.querySelector('[data-field="qty"]').value);
       const price = clampNumber(tr.querySelector('[data-field="price"]').value);
       const tot = qty * price;
-      tableData.push([desc, cleanSpaces(String(qty)), cleanSpaces(fmtMoney.format(price)), cleanSpaces(fmtMoney.format(tot))]);
+      tableData.push([desc, note, cleanSpaces(String(qty)), cleanSpaces(fmtMoney.format(price)), cleanSpaces(fmtMoney.format(tot))]);
     }
 
     doc.autoTable({
-      head: [['Description', 'Qté', 'Prix unitaire HT', 'Total HT']],
+      head: [['Description', 'Note', 'Qté', 'Prix unitaire HT', 'Total HT']], // AJOUT NOTE
       body: tableData,
       startY: y,
       margin: { left: margin, right: margin },
@@ -619,9 +638,10 @@
       headStyles: { fillColor: [30, 60, 114], textColor: 255, fontStyle: 'bold' },
       columnStyles: {
         0: { cellWidth: 'auto' },
-        1: { halign: 'right', cellWidth: 20 },
-        2: { halign: 'right', cellWidth: 40 },
-        3: { halign: 'right', cellWidth: 38 }
+        1: { cellWidth: 35 }, // largeur pour la note
+        2: { halign: 'right', cellWidth: 20 },
+        3: { halign: 'right', cellWidth: 40 },
+        4: { halign: 'right', cellWidth: 38 }
       },
       alternateRowStyles: { fillColor: [248, 250, 255] }
     });
@@ -683,7 +703,7 @@
     showToast('PDF téléchargé.', 'success');
   }
 
-  // Export Excel
+  // Export Excel avec note
   function exportExcel() {
     if (!validateBeforeExport()) return;
 
@@ -708,14 +728,15 @@
       [refs.clientExtra.value || ''],
       ...(refs.clientIfu.value ? [['IFU', refs.clientIfu.value]] : []),
       [],
-      ['Description', 'Quantité', `Prix unitaire HT (${curr})`, `Total HT (${curr})`]
+      ['Description', 'Note', 'Quantité', `Prix unitaire HT (${curr})`, `Total HT (${curr})`] // AJOUT NOTE
     ];
 
     for (const tr of refs.itemsBody.rows) {
       const desc = tr.querySelector('[data-field="description"]').value || '';
+      const note = tr.querySelector('[data-field="note"]').value || ''; // AJOUT NOTE
       const qty = clampNumber(tr.querySelector('[data-field="qty"]').value);
       const price = clampNumber(tr.querySelector('[data-field="price"]').value);
-      data.push([desc, qty, price, qty * price]);
+      data.push([desc, note, qty, price, qty * price]);
     }
 
     const subtotal = computeSubtotal();
@@ -723,21 +744,21 @@
     const ttc = subtotal + tax;
 
     data.push([]);
-    data.push(['Sous-total HT', '', '', subtotal]);
-    if (vat > 0) data.push([`TVA (${vat}%)`, '', '', tax]);
-    data.push(['Total TTC', '', '', ttc]);
+    data.push(['Sous-total HT', '', '', '', subtotal]);
+    if (vat > 0) data.push([`TVA (${vat}%)`, '', '', '', tax]);
+    data.push(['Total TTC', '', '', '', ttc]);
     data.push([]);
     data.push(['Signature : _________________________________']);
 
     const ws = XLSX.utils.aoa_to_sheet(data);
-    ws['!cols'] = [{ wch: 44 }, { wch: 12 }, { wch: 22 }, { wch: 22 }, { wch: 14 }];
+    ws['!cols'] = [{ wch: 30 }, { wch: 20 }, { wch: 12 }, { wch: 18 }, { wch: 18 }]; // Ajusté pour la note
     XLSX.utils.book_append_sheet(wb, ws, 'Document');
 
     XLSX.writeFile(wb, `${refs.docTitle.textContent}_${refs.docNumber.value}.xlsx`);
     showToast('Excel téléchargé.', 'success');
   }
 
-  // Nouveau document
+  // Nouveau document (inchangé)
   function newDocument() {
     if (!confirm('Créer un nouveau document ?\n\nOK : sauvegarde l\'actuel dans l\'historique puis repart à zéro.')) return;
 
@@ -761,7 +782,7 @@
     refs.clientIfu.value = '';
 
     refs.itemsBody.innerHTML = '';
-    addItemRow({ id: uid(), description: '', qty: 1, price: 0 }, { focus: true });
+    addItemRow({ id: uid(), description: '', note: '', qty: 1, price: 0 }, { focus: true });
 
     updateCurrencyDisplay();
     updateTotals();
@@ -770,7 +791,7 @@
     showToast('Nouveau document prêt.', 'success');
   }
 
-  // Autocomplétion clients / articles
+  // Autocomplétion (inchangée, la note n'est pas sauvegardée dans l'historique des articles)
   const STORAGE_CLIENTS = 'invoiceClients.v2';
   const STORAGE_ITEMS = 'invoiceItems.v2';
 
@@ -900,7 +921,7 @@
     if (!phoneInput.value) phoneInput.value = '+229';
   }
 
-  // Gestionnaires d'événements
+  // Gestionnaires d'événements (inchangés, mais la note est prise en compte dans l'input)
   function bindEvents() {
     refs.btnProforma.addEventListener('click', () => setMode('proforma'));
     refs.btnFacture.addEventListener('click', () => setMode('facture'));
@@ -932,7 +953,7 @@
 
     // Bouton Ajouter une ligne
     refs.addRow.addEventListener('click', () => {
-      addItemRow({ id: uid(), description: '', qty: 1, price: 0 }, { focus: true });
+      addItemRow({ id: uid(), description: '', note: '', qty: 1, price: 0 }, { focus: true });
     });
 
     refs.itemsBody.addEventListener('input', (e) => {

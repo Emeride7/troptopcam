@@ -108,7 +108,7 @@ body {
   margin-top: 20px;
 }
 
-/* En-tête de facture (style original) */
+/* En-tête de facture */
 .invoice-header {
   background: var(--primary);
   color: white;
@@ -759,139 +759,24 @@ footer {
     justify-content: center;
   }
 }
-/* Gestionnaire d'articles */
-.items-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.45);
-  z-index: 200;
-  display: none;
+/* Ajustement pour la nouvelle colonne Note */
+.items-table th:nth-child(2),
+.items-table td:nth-child(2) {
+  min-width: 150px;
 }
-
-.items-overlay.open {
-  display: block;
+.items-table th:nth-child(3),
+.items-table td:nth-child(3) {
+  width: 100px;
 }
-
-.items-panel {
-  position: fixed;
-  top: 0;
-  right: 0;
-  width: 390px;
-  max-width: 92vw;
-  height: 100%;
-  background: white;
-  box-shadow: -4px 0 20px rgba(0,0,0,.15);
-  z-index: 201;
-  display: flex;
-  flex-direction: column;
-  transform: translateX(100%);
-  transition: transform 0.25s;
+.items-table th:nth-child(4),
+.items-table td:nth-child(4) {
+  width: 120px;
 }
-
-.items-overlay.open .items-panel {
-  transform: translateX(0);
+.items-table th:nth-child(5),
+.items-table td:nth-child(5) {
+  width: 120px;
 }
-
-.items-panel-header {
-  background: var(--primary);
-  color: white;
-  padding: 16px 18px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-weight: 800;
-}
-
-.items-panel-header button {
-  background: none;
-  border: none;
-  color: white;
-  font-size: 1.2rem;
-  cursor: pointer;
-}
-
-.items-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 14px;
-}
-
-.item-manage-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  margin-bottom: 8px;
-  background: white;
-}
-
-.item-manage-row:hover {
-  background: var(--accent);
-  border-color: var(--secondary);
-}
-
-.item-manage-info {
-  flex: 1;
-}
-
-.item-manage-desc {
-  font-weight: 600;
-  color: var(--primary);
-}
-
-.item-manage-price {
-  font-size: 0.85rem;
-  color: var(--text-light);
-  margin-top: 2px;
-}
-
-.item-manage-delete {
-  background: none;
-  border: none;
-  color: var(--danger);
-  font-size: 1.2rem;
-  cursor: pointer;
-  padding: 0 8px;
-}
-
-.item-manage-delete:hover {
-  color: #b91c1c;
-}
-
-.items-panel-footer {
-  padding: 16px;
-  border-top: 1px solid var(--border);
-  text-align: center;
-}
-
-.items-panel-footer button {
-  background: var(--primary);
-  color: white;
-  border: none;
-  padding: 8px 20px;
-  border-radius: 30px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.btn-manage-items {
-  background: var(--accent);
-  border: 1px solid var(--secondary);
-  color: var(--secondary);
-  padding: 8px 16px;
-  border-radius: 30px;
-  font-weight: 600;
-  font-size: 0.85rem;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.2s;
-}
-
-.btn-manage-items:hover {
-  background: var(--secondary);
-  color: white;
+.items-table th:nth-child(6),
+.items-table td:nth-child(6) {
+  width: 80px;
 }
