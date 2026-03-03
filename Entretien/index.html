@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ProGestion - Maintenance</title>
+  <title>CamSuite - Maintenance</title>
   <!-- Google Fonts & Font Awesome -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,7 +18,7 @@
 <body>
   <nav class="navbar">
     <div class="nav-container">
-      <a href="../" class="nav-brand"><i class="fas fa-camera-retro"></i> ProGestion</a>
+      <a href="../" class="nav-brand"><i class="fas fa-camera-retro"></i> CamSuite</a>
       <ul class="nav-links">
         <li><a href="../"><i class="fas fa-home"></i> Accueil</a></li>
         <li><a href="../maintenance/" class="active"><i class="fas fa-tools"></i> Maintenance</a></li>
@@ -78,24 +78,24 @@
     <!-- Statistiques -->
     <div class="stats-grid">
       <div class="stat-card total">
-        <div class="stat-icon"><i class="fas fa-box"></i></div>
+        <div class="stat-icon"><i class="fas fa-video"></i></div>
         <div class="stat-content">
-          <span class="stat-label">Total équipements</span>
-          <span class="stat-number" id="totalEquipments">0</span>
+          <span class="stat-label">Total caméras</span>
+          <span class="stat-number" id="totalCameras">0</span>
         </div>
       </div>
       <div class="stat-card fonctionnelle">
         <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
         <div class="stat-content">
-          <span class="stat-label">En bon état</span>
-          <span class="stat-number" id="totalFonctionnels">0</span>
+          <span class="stat-label">Fonctionnelles</span>
+          <span class="stat-number" id="totalFonctionnelles">0</span>
         </div>
       </div>
       <div class="stat-card non-fonctionnelle">
         <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
         <div class="stat-content">
-          <span class="stat-label">Hors service</span>
-          <span class="stat-number" id="totalNonFonctionnels">0</span>
+          <span class="stat-label">Non fonctionnelles</span>
+          <span class="stat-number" id="totalNonFonctionnelles">0</span>
         </div>
       </div>
     </div>
@@ -104,16 +104,12 @@
     <div class="main-panel">
       <!-- Formulaire d'ajout -->
       <div class="form-card">
-        <!-- Titre avec bouton Gérer les listes -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-          <h2 style="margin-bottom: 0;"><i class="fas fa-plus-circle"></i> Ajouter / modifier un équipement</h2>
-          <button id="btnManageLists" class="btn-manage-lists" style="width: auto; margin-top: 0;"><i class="fas fa-list"></i> Gérer les listes</button>
-        </div>
-        <form id="equipmentForm">
-          <input type="hidden" id="equipmentId">
+        <h2><i class="fas fa-plus-circle"></i> Ajouter / modifier une caméra</h2>
+        <form id="cameraForm">
+          <input type="hidden" id="cameraId">
           <div class="form-group">
-            <label for="equipmentName"><i class="fas fa-tag"></i> Nom de l'équipement</label>
-            <input type="text" id="equipmentName" placeholder="ex: Chauffe-eau" required>
+            <label for="cameraName"><i class="fas fa-camera"></i> Nom de la caméra</label>
+            <input type="text" id="cameraName" placeholder="ex: Camera 1" required>
           </div>
           <div class="form-group">
             <label for="emplacement"><i class="fas fa-map-marker-alt"></i> Emplacement</label>
@@ -143,27 +139,27 @@
           <button type="submit" class="btn-submit"><i class="fas fa-save"></i> Enregistrer</button>
         </form>
 
-        <!-- Configuration des listes (champs d'ajout) -->
+        <!-- Configuration des listes -->
         <div class="config-section">
           <h3><i class="fas fa-cog"></i> Configuration des listes</h3>
           <div class="config-item">
             <label>Nouvel emplacement</label>
             <div class="config-input-group">
-              <input type="text" id="newEmplacement" placeholder="ex: Sous-sol">
+              <input type="text" id="newEmplacement" placeholder="ex: Toit">
               <button onclick="addEmplacement()" class="btn-config"><i class="fas fa-plus"></i> Ajouter</button>
             </div>
           </div>
           <div class="config-item">
             <label>Nouveau problème</label>
             <div class="config-input-group">
-              <input type="text" id="newProbleme" placeholder="ex: Fuite">
+              <input type="text" id="newProbleme" placeholder="ex: Problème de connexion">
               <button onclick="addProbleme()" class="btn-config"><i class="fas fa-plus"></i> Ajouter</button>
             </div>
           </div>
           <div class="config-item">
             <label>Nouvelle action</label>
             <div class="config-input-group">
-              <input type="text" id="newAction" placeholder="ex: Remplacer joint">
+              <input type="text" id="newAction" placeholder="ex: Réparation urgente">
               <button onclick="addAction()" class="btn-config"><i class="fas fa-plus"></i> Ajouter</button>
             </div>
           </div>
@@ -171,24 +167,24 @@
         </div>
       </div>
 
-      <!-- Tableau des équipements -->
+      <!-- Tableau des caméras -->
       <div class="table-card">
         <div class="table-header">
-          <h2><i class="fas fa-list"></i> Liste des équipements</h2>
+          <h2><i class="fas fa-list"></i> Liste des caméras</h2>
         </div>
         <div class="table-responsive">
-          <table id="equipmentsTable">
+          <table id="camerasTable">
             <thead>
               <tr>
-                <th>Équipement</th>
+                <th>Caméra</th>
                 <th>Emplacement</th>
                 <th>État</th>
                 <th>Problème</th>
-                <th>Actions recommandées</th>
+                <th>Actions</th>
                 <th>Gestion</th>
               </tr>
             </thead>
-            <tbody id="equipmentsTableBody"></tbody>
+            <tbody id="camerasTableBody"></tbody>
           </table>
         </div>
       </div>
@@ -199,34 +195,7 @@
     <p><i class="far fa-save"></i> Sauvegarde automatique activée</p>
   </footer>
 
-  <!-- Gestionnaire des listes -->
-  <div class="lists-overlay" id="listsOverlay">
-    <div class="lists-panel">
-      <div class="lists-panel-header">
-        <span><i class="fas fa-cog"></i> Gestion des listes</span>
-        <button type="button" id="btnCloseLists" aria-label="Fermer"><i class="fas fa-times"></i></button>
-      </div>
-      <div class="lists-panel-content">
-        <div class="list-section">
-          <h4>Emplacements</h4>
-          <div id="emplacementsList" class="list-items"></div>
-        </div>
-        <div class="list-section">
-          <h4>Problèmes</h4>
-          <div id="problemesList" class="list-items"></div>
-        </div>
-        <div class="list-section">
-          <h4>Actions</h4>
-          <div id="actionsList" class="list-items"></div>
-        </div>
-      </div>
-      <div class="lists-panel-footer">
-        <button id="btnCloseListsBottom">Fermer</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Toast -->
+  <!-- Toast (optionnel mais utilisé dans script) -->
   <div class="toast-notification" id="toast"></div>
 
   <script src="../assets/js/shared.js"></script>
