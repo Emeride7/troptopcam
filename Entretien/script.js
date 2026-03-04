@@ -1,22 +1,16 @@
 (function() {
   const { storage, uid, fmtMoney, todayISO, clampNumber, downscaleImageToDataURL } = Shared;
 
-  // Données par défaut (caméras)
+  // Données par défaut enrichies
   const defaultData = {
     company: { name: '', address: '', extra: '', tel: '', logo: null },
     client: { name: '', address: '', extra: '', tel: '' },
     cameras: [
-      { id: 1, name: 'Camera 1', emplacement: 'Extérieur Gauche', etat: 'Bon', probleme: 'RAS', actions: ['Nettoyage des objectifs'] },
-      { id: 2, name: 'Camera 2', emplacement: 'Piscine', etat: 'Bon', probleme: 'RAS', actions: ['Réglage des angles de vue'] },
-      { id: 3, name: 'Camera 3', emplacement: 'Couloir Cuisine', etat: 'Bon', probleme: 'RAS', actions: ['Mise à jour du firmware'] },
-      { id: 4, name: 'Camera 4', emplacement: 'Couloir Gauche', etat: 'Bon', probleme: 'RAS', actions: [] },
-      { id: 5, name: 'Camera 5', emplacement: 'Montée Escalier', etat: 'Bon', probleme: 'RAS', actions: [] },
-      { id: 6, name: 'Camera 6', emplacement: 'Hal R+1', etat: 'Bon', probleme: 'RAS', actions: [] },
-      { id: 7, name: 'Camera 7', emplacement: 'Couloir Piscine', etat: 'Bon', probleme: 'RAS', actions: [] },
-      { id: 8, name: 'Camera 8', emplacement: 'Jardin', etat: 'Pas Bon', probleme: 'Camera court circuité à cause de l\'eau de pluie', actions: ['Remplacement des caméras'] },
-      { id: 9, name: 'Camera 9', emplacement: 'Parking', etat: 'Pas Bon', probleme: '', actions: ['Remplacement des caméras'] },
-      { id: 10, name: 'Camera 10', emplacement: 'Extérieur Droit', etat: 'Pas Bon', probleme: '', actions: ['Remplacement des caméras'] },
-      { id: 11, name: 'Camera 11', emplacement: 'Hall Rez', etat: 'Pas Bon', probleme: 'Connecteurs endommagés', actions: ['Remplacement de connecteurs endommagés'] }
+      { id: 1, name: 'Camera 1', emplacement: 'Extérieur Gauche', etat: 'Bon', problemes: ['RAS'], actions: [], lastModified: new Date().toISOString() },
+      { id: 2, name: 'Camera 2', emplacement: 'Piscine', etat: 'Bon', problemes: ['RAS'], actions: [], lastModified: new Date().toISOString() },
+      // ... autres caméras avec problemes (tableau) au lieu de probleme (string)
+      { id: 8, name: 'Camera 8', emplacement: 'Jardin', etat: 'Pas Bon', problemes: ['Camera court circuité à cause de l\'eau de pluie'], actions: ['Remplacement des caméras'], lastModified: new Date().toISOString() },
+      { id: 11, name: 'Camera 11', emplacement: 'Hall Rez', etat: 'Pas Bon', problemes: ['Connecteurs endommagés'], actions: ['Remplacement de connecteurs endommagés'], lastModified: new Date().toISOString() }
     ],
     emplacements: [
       'Extérieur Gauche', 'Piscine', 'Couloir Cuisine', 'Couloir Gauche',
@@ -24,28 +18,71 @@
       'Parking', 'Extérieur Droit', 'Hall Rez'
     ],
     problemes: [
-      'RAS', 'Camera court circuité à cause de l\'eau de pluie',
-      'Connecteurs endommagés', 'Problème de connexion', 'Image floue'
+      'RAS',
+      'Camera court circuité à cause de l\'eau de pluie',
+      'Connecteurs endommagés',
+      'Problème de connexion',
+      'Image floue',
+      'Problème d\'alimentation',
+      'Firmware obsolète',
+      'Câble endommagé',
+      'Surchauffe',
+      'Panne de disque dur'
     ],
     actions: [
-      'Nettoyage des objectifs', 'Réglage des angles de vue',
-      'Mise à jour du firmware', 'Remplacement des caméras',
-      'Remplacement de connecteurs endommagés', 'Réparation urgente'
-    ]
+      'Nettoyage des objectifs',
+      'Réglage des angles de vue',
+      'Mise à jour du firmware',
+      'Remplacement des caméras',
+      'Remplacement de connecteurs endommagés',
+      'Réparation urgente',
+      'Vérification câblage',
+      'Reconfiguration réseau',
+      'Remplacement disque dur',
+      'Nettoyage ventilateur'
+    ],
+    // Table de correspondance problèmes -> actions (codée en dur)
+    problemActionMap: {
+      'Camera court circuité à cause de l\'eau de pluie': ['Remplacement des caméras'],
+      'Connecteurs endommagés': ['Remplacement de connecteurs endommagés'],
+      'Problème de connexion': ['Vérification câblage', 'Reconfiguration réseau'],
+      'Image floue': ['Nettoyage des objectifs', 'Réglage des angles de vue'],
+      'Problème d\'alimentation': ['Réparation urgente'],
+      'Firmware obsolète': ['Mise à jour du firmware'],
+      'Câble endommagé': ['Remplacement de connecteurs endommagés'],
+      'Surchauffe': ['Nettoyage ventilateur'],
+      'Panne de disque dur': ['Remplacement disque dur']
+    },
+    bonNote: 'Nettoyage des objectifs, Réglage des angles de vue, Mise à jour du firmware des caméras, Vérification enregistreurs NVR'
   };
 
   // Chargement des données
   let appData = storage.get('cameraMaintenanceData') || defaultData;
+  // Fusionner les tableaux (au cas où)
   if (!Array.isArray(appData.emplacements)) appData.emplacements = defaultData.emplacements;
   if (!Array.isArray(appData.problemes)) appData.problemes = defaultData.problemes;
   if (!Array.isArray(appData.actions)) appData.actions = defaultData.actions;
+  if (!appData.problemActionMap) appData.problemActionMap = defaultData.problemActionMap;
+  if (!appData.bonNote) appData.bonNote = defaultData.bonNote;
 
   let company = { ...defaultData.company, ...appData.company };
   let client = { ...defaultData.client, ...appData.client };
   let cameras = appData.cameras || [];
+  // Convertir les anciennes caméras avec "probleme" en tableau "problemes"
+  cameras.forEach(c => {
+    if (c.probleme && !c.problemes) {
+      c.problemes = [c.probleme];
+      delete c.probleme;
+    }
+    if (!c.problemes) c.problemes = [];
+    if (!c.actions) c.actions = [];
+    if (!c.lastModified) c.lastModified = new Date().toISOString();
+  });
   let emplacements = appData.emplacements;
   let problemes = appData.problemes;
   let actions = appData.actions;
+  let problemActionMap = appData.problemActionMap;
+  let bonNote = appData.bonNote;
 
   // Références DOM
   const companyName = document.getElementById('companyName');
@@ -63,7 +100,7 @@
   const cameraId = document.getElementById('cameraId');
   const emplacementSelect = document.getElementById('emplacement');
   const etatSelect = document.getElementById('etat');
-  const problemeSelect = document.getElementById('probleme');
+  const problemeCheckboxesDiv = document.getElementById('problemeCheckboxes');
   const actionsCheckboxesDiv = document.getElementById('actionsCheckboxes');
   const camerasTableBody = document.getElementById('camerasTableBody');
   const saveStatus = document.getElementById('saveStatus');
@@ -72,7 +109,11 @@
   const totalNonFonctionnellesSpan = document.getElementById('totalNonFonctionnelles');
   const pdfBtn = document.getElementById('btnPdfMaintenance');
   const createInvoiceBtn = document.getElementById('createInvoiceBtn');
+  const bonNoteTextarea = document.getElementById('bonNote');
   const toast = document.getElementById('toast');
+
+  // Initialiser la zone de texte de la note Bon
+  if (bonNoteTextarea) bonNoteTextarea.value = bonNote;
 
   // Fonction toast
   function showToast(msg, type = 'info', duration = 2500) {
@@ -81,27 +122,6 @@
     toast.classList.add('show');
     clearTimeout(showToast._timer);
     showToast._timer = setTimeout(() => toast.classList.remove('show'), duration);
-  }
-
-  // Initialisation
-  function init() {
-    companyName.value = company.name || '';
-    companyAddress.value = company.address || '';
-    companyExtra.value = company.extra || '';
-    companyTel.value = company.tel || '';
-    if (company.logo) {
-      companyLogoPreview.src = company.logo;
-      companyLogoPreview.style.display = 'block';
-      companyLogoPlaceholder.style.display = 'none';
-    }
-    clientName.value = client.name || '';
-    clientAddress.value = client.address || '';
-    clientExtra.value = client.extra || '';
-    clientTel.value = client.tel || '';
-
-    updateSelects();
-    renderActionsCheckboxes();
-    renderCameras();
   }
 
   // Sauvegarde
@@ -114,8 +134,9 @@
     client.address = clientAddress.value;
     client.extra = clientExtra.value;
     client.tel = clientTel.value;
+    if (bonNoteTextarea) bonNote = bonNoteTextarea.value;
 
-    const data = { company, client, cameras, emplacements, problemes, actions };
+    const data = { company, client, cameras, emplacements, problemes, actions, problemActionMap, bonNote };
     storage.set('cameraMaintenanceData', data);
     if (showToastMsg) showToast('Données sauvegardées', 'success');
     else {
@@ -124,16 +145,38 @@
     }
   }
 
-  // Mise à jour des selects (emplacements et problèmes)
+  // Mise à jour des selects (emplacements)
   function updateSelects() {
     emplacementSelect.innerHTML = '<option value="">Sélectionner un emplacement</option>';
     emplacements.forEach(emp => {
       emplacementSelect.innerHTML += `<option value="${emp}">${emp}</option>`;
     });
+  }
 
-    problemeSelect.innerHTML = '<option value="">Sélectionner un problème</option>';
+  // Rendu des cases à cocher pour les problèmes
+  function renderProblemeCheckboxes(selectedProblemes = []) {
+    problemeCheckboxesDiv.innerHTML = '';
     problemes.forEach(prob => {
-      problemeSelect.innerHTML += `<option value="${prob}">${prob}</option>`;
+      const label = document.createElement('label');
+      label.style.display = 'block';
+      label.style.marginBottom = '4px';
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.value = prob;
+      checkbox.checked = selectedProblemes.includes(prob);
+      checkbox.addEventListener('change', function(e) {
+        // Limiter à 3 sélections
+        const checkboxes = problemeCheckboxesDiv.querySelectorAll('input[type="checkbox"]');
+        const checked = Array.from(checkboxes).filter(cb => cb.checked);
+        if (checked.length > 3) {
+          this.checked = false;
+          showToast('Vous ne pouvez sélectionner que 3 problèmes maximum.', 'warning');
+        }
+        // Si l'état est "Bon", on force la déselection et on remet "RAS" ? On gère via l'événement sur etatSelect
+      });
+      label.appendChild(checkbox);
+      label.appendChild(document.createTextNode(' ' + prob));
+      problemeCheckboxesDiv.appendChild(label);
     });
   }
 
@@ -163,10 +206,52 @@
     });
   }
 
+  // Mise à jour automatique des actions en fonction des problèmes sélectionnés
+  function updateActionsFromProblemes() {
+    const problemeCheckboxes = problemeCheckboxesDiv.querySelectorAll('input[type="checkbox"]:checked');
+    const selectedProblemes = Array.from(problemeCheckboxes).map(cb => cb.value);
+    let suggestedActions = new Set();
+    selectedProblemes.forEach(prob => {
+      if (problemActionMap[prob]) {
+        problemActionMap[prob].forEach(action => suggestedActions.add(action));
+      }
+    });
+    // Cocher les actions suggérées (sans dépasser 3)
+    const actionCheckboxes = actionsCheckboxesDiv.querySelectorAll('input[type="checkbox"]');
+    actionCheckboxes.forEach(cb => {
+      if (suggestedActions.has(cb.value)) {
+        cb.checked = true;
+      }
+    });
+    // Vérifier le nombre max (si trop, on avertit)
+    const checkedActions = Array.from(actionCheckboxes).filter(cb => cb.checked);
+    if (checkedActions.length > 3) {
+      showToast('Trop d\'actions suggérées, veuillez en désélectionner.', 'warning');
+    }
+  }
+
+  // Écouter les changements sur les cases de problèmes
+  if (problemeCheckboxesDiv) {
+    problemeCheckboxesDiv.addEventListener('change', updateActionsFromProblemes);
+  }
+
+  // Quand l'état change : si "Bon", forcer le problème à "RAS" et désactiver les autres ?
+  etatSelect.addEventListener('change', function() {
+    if (this.value === 'Bon') {
+      // Décocher tous les problèmes sauf "RAS"
+      const checkboxes = problemeCheckboxesDiv.querySelectorAll('input[type="checkbox"]');
+      checkboxes.forEach(cb => {
+        if (cb.value === 'RAS') cb.checked = true;
+        else cb.checked = false;
+      });
+      // Forcer les actions ? On laisse l'utilisateur choisir, mais on peut suggérer des actions d'entretien
+      // Optionnel : cocher quelques actions par défaut ? On ne fait rien.
+    }
+  });
+
   // Variables pour le drag & drop
   let draggedRow = null;
 
-  // Gestionnaires de drag & drop
   function handleDragStart(e) {
     draggedRow = this;
     e.dataTransfer.effectAllowed = 'move';
@@ -220,15 +305,17 @@
       cellDrag.classList.add('drag-handle');
       cellDrag.innerHTML = '<i class="fas fa-grip-vertical"></i>';
 
+      // Problèmes sous forme de liste
+      const problemesStr = Array.isArray(camera.problemes) ? camera.problemes.join(', ') : (camera.problemes || '-');
       // Actions sous forme de liste
-      const actionsList = Array.isArray(camera.actions) ? camera.actions.join(', ') : camera.actions || '-';
+      const actionsStr = Array.isArray(camera.actions) ? camera.actions.join(', ') : (camera.actions || '-');
 
       row.innerHTML += `
         <td>${camera.name}</td>
         <td>${camera.emplacement}</td>
         <td><span class="badge ${camera.etat === 'Bon' ? 'badge-success' : 'badge-danger'}">${camera.etat}</span></td>
-        <td>${camera.probleme || '-'}</td>
-        <td>${actionsList}</td>
+        <td>${problemesStr}</td>
+        <td>${actionsStr}</td>
         <td>
           <div class="action-buttons">
             <button class="action-btn edit-btn" onclick="window.editCamera(${camera.id})"><i class="fas fa-edit"></i> Modifier</button>
@@ -237,7 +324,6 @@
         </td>
       `;
 
-      // Ajout des écouteurs d'événements pour le drag & drop
       row.addEventListener('dragstart', handleDragStart);
       row.addEventListener('dragover', handleDragOver);
       row.addEventListener('drop', handleDrop);
@@ -254,16 +340,20 @@
     e.preventDefault();
 
     const id = cameraId.value;
+    // Récupérer les problèmes cochés
+    const problemeCheckboxes = problemeCheckboxesDiv.querySelectorAll('input[type="checkbox"]:checked');
+    const selectedProblemes = Array.from(problemeCheckboxes).map(cb => cb.value);
     // Récupérer les actions cochées
-    const checkboxes = actionsCheckboxesDiv.querySelectorAll('input[type="checkbox"]:checked');
-    const selectedActions = Array.from(checkboxes).map(cb => cb.value);
+    const actionCheckboxes = actionsCheckboxesDiv.querySelectorAll('input[type="checkbox"]:checked');
+    const selectedActions = Array.from(actionCheckboxes).map(cb => cb.value);
 
     const cameraData = {
       name: cameraName.value,
       emplacement: emplacementSelect.value,
       etat: etatSelect.value,
-      probleme: problemeSelect.value || '',
-      actions: selectedActions
+      problemes: selectedProblemes,
+      actions: selectedActions,
+      lastModified: new Date().toISOString()
     };
 
     if (id) {
@@ -278,7 +368,8 @@
 
     this.reset();
     cameraId.value = '';
-    renderActionsCheckboxes(); // remet à zéro les cases
+    renderProblemeCheckboxes();
+    renderActionsCheckboxes();
     renderCameras();
     saveToLocalStorage(true);
   });
@@ -290,8 +381,7 @@
       cameraName.value = camera.name;
       emplacementSelect.value = camera.emplacement;
       etatSelect.value = camera.etat;
-      problemeSelect.value = camera.probleme || '';
-      // Pré-remplir les cases à cocher
+      renderProblemeCheckboxes(camera.problemes || []);
       renderActionsCheckboxes(camera.actions || []);
     }
   };
@@ -304,15 +394,16 @@
     }
   };
 
-  // Ajout dans les listes (insensible à la casse)
+  // Ajout dans les listes
   function addUniqueItem(list, newValue, listName) {
     const trimmed = newValue.trim();
     if (!trimmed) return false;
     const exists = list.some(item => item.toLowerCase() === trimmed.toLowerCase());
     if (!exists) {
       list.push(trimmed);
-      // Mettre à jour les selects ou cases à cocher
-      if (listName === 'actions') {
+      if (listName === 'problemes') {
+        renderProblemeCheckboxes();
+      } else if (listName === 'actions') {
         renderActionsCheckboxes();
       } else {
         updateSelects();
@@ -331,8 +422,9 @@
 
   window.addProbleme = function() {
     const input = document.getElementById('newProbleme');
-    addUniqueItem(problemes, input.value, 'problemes');
-    input.value = '';
+    if (addUniqueItem(problemes, input.value, 'problemes')) {
+      input.value = '';
+    }
   };
 
   window.addAction = function() {
@@ -348,9 +440,19 @@
       company = { ...defaultData.company };
       client = { ...defaultData.client };
       cameras = JSON.parse(JSON.stringify(defaultData.cameras));
+      cameras.forEach(c => {
+        if (!c.problemes) c.problemes = c.probleme ? [c.probleme] : [];
+        if (!c.actions) c.actions = c.action ? [c.action] : [];
+        delete c.probleme;
+        delete c.action;
+        c.lastModified = new Date().toISOString();
+      });
       emplacements = [...defaultData.emplacements];
       problemes = [...defaultData.problemes];
       actions = [...defaultData.actions];
+      problemActionMap = { ...defaultData.problemActionMap };
+      bonNote = defaultData.bonNote;
+      if (bonNoteTextarea) bonNoteTextarea.value = bonNote;
 
       companyName.value = company.name;
       companyAddress.value = company.address;
@@ -370,6 +472,7 @@
       clientTel.value = client.tel;
 
       updateSelects();
+      renderProblemeCheckboxes();
       renderActionsCheckboxes();
       renderCameras();
       saveToLocalStorage(true);
@@ -415,8 +518,14 @@
 
       // Construire les lignes de prestations pour la facture
       const items = cameras.map(camera => {
-        const description = `Caméra ${camera.name} - ${camera.emplacement}${camera.probleme ? ' (problème: ' + camera.probleme + ')' : ''}`;
-        const note = Array.isArray(camera.actions) ? camera.actions.join(', ') : (camera.actions || '');
+        let description, note;
+        if (camera.etat === 'Bon') {
+          description = 'Maintenance et Entretien';
+          note = bonNote; // Utiliser la note configurable
+        } else {
+          description = `Caméra ${camera.name} - ${camera.emplacement}${camera.problemes && camera.problemes.length ? ' (problème: ' + camera.problemes.join(', ') + ')' : ''}`;
+          note = Array.isArray(camera.actions) ? camera.actions.join(', ') : (camera.actions || '');
+        }
         return {
           description: description,
           note: note,
@@ -425,18 +534,16 @@
         };
       });
 
-      // Préparer les données à transférer
       const pendingData = {
         client: {
           name: client.name,
           address: client.address,
           extra: client.extra || '',
-          ifu: '' // pas d'IFU dans l'entretien
+          ifu: ''
         },
         items: items
       };
 
-      // Stocker dans localStorage
       storage.set('pendingInvoiceData', pendingData);
       showToast('Données prêtes. Redirection vers la facture...', 'success');
       setTimeout(() => {
@@ -445,7 +552,7 @@
     });
   }
 
-  // EXPORT PDF (adapté pour afficher les actions multiples)
+  // EXPORT PDF (adapté pour problèmes multiples et actions)
   if (pdfBtn) {
     pdfBtn.addEventListener('click', function() {
       try {
@@ -461,7 +568,6 @@
         const primaryColor = [30, 60, 114];
         const secondaryColor = [42, 82, 152];
 
-        // Bandeau supérieur
         doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
         doc.rect(0, 0, pageW, 45, 'F');
 
@@ -517,20 +623,20 @@
 
         y += 40;
 
-        // Construction du tableau avec actions multiples
         const tableData = cameras.map(c => {
+          const problemesStr = Array.isArray(c.problemes) ? c.problemes.join(', ') : (c.problemes || '-');
           const actionsStr = Array.isArray(c.actions) ? c.actions.join(', ') : (c.actions || '-');
           return [
             c.name,
             c.emplacement,
             c.etat,
-            c.probleme || '-',
+            problemesStr,
             actionsStr
           ];
         });
 
         doc.autoTable({
-          head: [['Caméra', 'Emplacement', 'État', 'Problème', 'Actions recommandées']],
+          head: [['Caméra', 'Emplacement', 'État', 'Problème(s)', 'Actions recommandées']],
           body: tableData,
           startY: y,
           margin: { left: margin, right: margin },
@@ -560,6 +666,28 @@
         showToast('Erreur lors de la génération du PDF', 'error');
       }
     });
+  }
+
+  // Initialisation
+  function init() {
+    companyName.value = company.name || '';
+    companyAddress.value = company.address || '';
+    companyExtra.value = company.extra || '';
+    companyTel.value = company.tel || '';
+    if (company.logo) {
+      companyLogoPreview.src = company.logo;
+      companyLogoPreview.style.display = 'block';
+      companyLogoPlaceholder.style.display = 'none';
+    }
+    clientName.value = client.name || '';
+    clientAddress.value = client.address || '';
+    clientExtra.value = client.extra || '';
+    clientTel.value = client.tel || '';
+
+    updateSelects();
+    renderProblemeCheckboxes();
+    renderActionsCheckboxes();
+    renderCameras();
   }
 
   init();
