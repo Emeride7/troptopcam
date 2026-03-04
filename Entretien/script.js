@@ -6,17 +6,17 @@
     company: { name: '', address: '', extra: '', tel: '', logo: null },
     client: { name: '', address: '', extra: '', tel: '' },
     cameras: [
-      { id: 1, name: 'Camera 1', emplacement: 'Extérieur Gauche', etat: 'Bon', probleme: 'RAS', action: 'Nettoyage des objectifs' },
-      { id: 2, name: 'Camera 2', emplacement: 'Piscine', etat: 'Bon', probleme: 'RAS', action: 'Réglage des angles de vue' },
-      { id: 3, name: 'Camera 3', emplacement: 'Couloir Cuisine', etat: 'Bon', probleme: 'RAS', action: 'Mise à jour du firmware' },
-      { id: 4, name: 'Camera 4', emplacement: 'Couloir Gauche', etat: 'Bon', probleme: 'RAS', action: '' },
-      { id: 5, name: 'Camera 5', emplacement: 'Montée Escalier', etat: 'Bon', probleme: 'RAS', action: '' },
-      { id: 6, name: 'Camera 6', emplacement: 'Hal R+1', etat: 'Bon', probleme: 'RAS', action: '' },
-      { id: 7, name: 'Camera 7', emplacement: 'Couloir Piscine', etat: 'Bon', probleme: 'RAS', action: '' },
-      { id: 8, name: 'Camera 8', emplacement: 'Jardin', etat: 'Pas Bon', probleme: 'Camera court circuité à cause de l\'eau de pluie', action: 'Remplacement des caméras' },
-      { id: 9, name: 'Camera 9', emplacement: 'Parking', etat: 'Pas Bon', probleme: '', action: 'Remplacement des caméras' },
-      { id: 10, name: 'Camera 10', emplacement: 'Extérieur Droit', etat: 'Pas Bon', probleme: '', action: 'Remplacement des caméras' },
-      { id: 11, name: 'Camera 11', emplacement: 'Hall Rez', etat: 'Pas Bon', probleme: 'Connecteurs endommagés', action: 'Remplacement de connecteurs endommagés' }
+      { id: 1, name: 'Camera 1', emplacement: 'Extérieur Gauche', etat: 'Bon', probleme: 'RAS', actions: ['Nettoyage des objectifs'] },
+      { id: 2, name: 'Camera 2', emplacement: 'Piscine', etat: 'Bon', probleme: 'RAS', actions: ['Réglage des angles de vue'] },
+      { id: 3, name: 'Camera 3', emplacement: 'Couloir Cuisine', etat: 'Bon', probleme: 'RAS', actions: ['Mise à jour du firmware'] },
+      { id: 4, name: 'Camera 4', emplacement: 'Couloir Gauche', etat: 'Bon', probleme: 'RAS', actions: [] },
+      { id: 5, name: 'Camera 5', emplacement: 'Montée Escalier', etat: 'Bon', probleme: 'RAS', actions: [] },
+      { id: 6, name: 'Camera 6', emplacement: 'Hal R+1', etat: 'Bon', probleme: 'RAS', actions: [] },
+      { id: 7, name: 'Camera 7', emplacement: 'Couloir Piscine', etat: 'Bon', probleme: 'RAS', actions: [] },
+      { id: 8, name: 'Camera 8', emplacement: 'Jardin', etat: 'Pas Bon', probleme: 'Camera court circuité à cause de l\'eau de pluie', actions: ['Remplacement des caméras'] },
+      { id: 9, name: 'Camera 9', emplacement: 'Parking', etat: 'Pas Bon', probleme: '', actions: ['Remplacement des caméras'] },
+      { id: 10, name: 'Camera 10', emplacement: 'Extérieur Droit', etat: 'Pas Bon', probleme: '', actions: ['Remplacement des caméras'] },
+      { id: 11, name: 'Camera 11', emplacement: 'Hall Rez', etat: 'Pas Bon', probleme: 'Connecteurs endommagés', actions: ['Remplacement de connecteurs endommagés'] }
     ],
     emplacements: [
       'Extérieur Gauche', 'Piscine', 'Couloir Cuisine', 'Couloir Gauche',
@@ -64,13 +64,14 @@
   const emplacementSelect = document.getElementById('emplacement');
   const etatSelect = document.getElementById('etat');
   const problemeSelect = document.getElementById('probleme');
-  const actionSelect = document.getElementById('action');
+  const actionsCheckboxesDiv = document.getElementById('actionsCheckboxes');
   const camerasTableBody = document.getElementById('camerasTableBody');
   const saveStatus = document.getElementById('saveStatus');
   const totalCamerasSpan = document.getElementById('totalCameras');
   const totalFonctionnellesSpan = document.getElementById('totalFonctionnelles');
   const totalNonFonctionnellesSpan = document.getElementById('totalNonFonctionnelles');
   const pdfBtn = document.getElementById('btnPdfMaintenance');
+  const createInvoiceBtn = document.getElementById('createInvoiceBtn');
   const toast = document.getElementById('toast');
 
   // Fonction toast
@@ -99,6 +100,7 @@
     clientTel.value = client.tel || '';
 
     updateSelects();
+    renderActionsCheckboxes();
     renderCameras();
   }
 
@@ -122,7 +124,7 @@
     }
   }
 
-  // Mise à jour des selects
+  // Mise à jour des selects (emplacements et problèmes)
   function updateSelects() {
     emplacementSelect.innerHTML = '<option value="">Sélectionner un emplacement</option>';
     emplacements.forEach(emp => {
@@ -133,10 +135,31 @@
     problemes.forEach(prob => {
       problemeSelect.innerHTML += `<option value="${prob}">${prob}</option>`;
     });
+  }
 
-    actionSelect.innerHTML = '<option value="">Sélectionner une action</option>';
-    actions.forEach(act => {
-      actionSelect.innerHTML += `<option value="${act}">${act}</option>`;
+  // Rendu des cases à cocher pour les actions
+  function renderActionsCheckboxes(selectedActions = []) {
+    actionsCheckboxesDiv.innerHTML = '';
+    actions.forEach(action => {
+      const label = document.createElement('label');
+      label.style.display = 'block';
+      label.style.marginBottom = '4px';
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.value = action;
+      checkbox.checked = selectedActions.includes(action);
+      checkbox.addEventListener('change', function(e) {
+        // Limiter à 3 sélections
+        const checkboxes = actionsCheckboxesDiv.querySelectorAll('input[type="checkbox"]');
+        const checked = Array.from(checkboxes).filter(cb => cb.checked);
+        if (checked.length > 3) {
+          this.checked = false;
+          showToast('Vous ne pouvez sélectionner que 3 actions maximum.', 'warning');
+        }
+      });
+      label.appendChild(checkbox);
+      label.appendChild(document.createTextNode(' ' + action));
+      actionsCheckboxesDiv.appendChild(label);
     });
   }
 
@@ -197,12 +220,15 @@
       cellDrag.classList.add('drag-handle');
       cellDrag.innerHTML = '<i class="fas fa-grip-vertical"></i>';
 
+      // Actions sous forme de liste
+      const actionsList = Array.isArray(camera.actions) ? camera.actions.join(', ') : camera.actions || '-';
+
       row.innerHTML += `
         <td>${camera.name}</td>
         <td>${camera.emplacement}</td>
         <td><span class="badge ${camera.etat === 'Bon' ? 'badge-success' : 'badge-danger'}">${camera.etat}</span></td>
         <td>${camera.probleme || '-'}</td>
-        <td>${camera.action || '-'}</td>
+        <td>${actionsList}</td>
         <td>
           <div class="action-buttons">
             <button class="action-btn edit-btn" onclick="window.editCamera(${camera.id})"><i class="fas fa-edit"></i> Modifier</button>
@@ -228,12 +254,16 @@
     e.preventDefault();
 
     const id = cameraId.value;
+    // Récupérer les actions cochées
+    const checkboxes = actionsCheckboxesDiv.querySelectorAll('input[type="checkbox"]:checked');
+    const selectedActions = Array.from(checkboxes).map(cb => cb.value);
+
     const cameraData = {
       name: cameraName.value,
       emplacement: emplacementSelect.value,
       etat: etatSelect.value,
       probleme: problemeSelect.value || '',
-      action: actionSelect.value || ''
+      actions: selectedActions
     };
 
     if (id) {
@@ -248,6 +278,7 @@
 
     this.reset();
     cameraId.value = '';
+    renderActionsCheckboxes(); // remet à zéro les cases
     renderCameras();
     saveToLocalStorage(true);
   });
@@ -260,7 +291,8 @@
       emplacementSelect.value = camera.emplacement;
       etatSelect.value = camera.etat;
       problemeSelect.value = camera.probleme || '';
-      actionSelect.value = camera.action || '';
+      // Pré-remplir les cases à cocher
+      renderActionsCheckboxes(camera.actions || []);
     }
   };
 
@@ -279,7 +311,12 @@
     const exists = list.some(item => item.toLowerCase() === trimmed.toLowerCase());
     if (!exists) {
       list.push(trimmed);
-      updateSelects();
+      // Mettre à jour les selects ou cases à cocher
+      if (listName === 'actions') {
+        renderActionsCheckboxes();
+      } else {
+        updateSelects();
+      }
       saveToLocalStorage(true);
       return true;
     }
@@ -300,8 +337,9 @@
 
   window.addAction = function() {
     const input = document.getElementById('newAction');
-    addUniqueItem(actions, input.value, 'actions');
-    input.value = '';
+    if (addUniqueItem(actions, input.value, 'actions')) {
+      input.value = '';
+    }
   };
 
   // Réinitialisation
@@ -332,6 +370,7 @@
       clientTel.value = client.tel;
 
       updateSelects();
+      renderActionsCheckboxes();
       renderCameras();
       saveToLocalStorage(true);
     }
@@ -362,7 +401,51 @@
     }
   });
 
-  // EXPORT PDF
+  // Création d'une facture à partir du rapport
+  if (createInvoiceBtn) {
+    createInvoiceBtn.addEventListener('click', function() {
+      if (!client.name || !client.address) {
+        showToast('Veuillez renseigner les informations du client.', 'error');
+        return;
+      }
+      if (cameras.length === 0) {
+        showToast('Aucune caméra dans le rapport.', 'error');
+        return;
+      }
+
+      // Construire les lignes de prestations pour la facture
+      const items = cameras.map(camera => {
+        const description = `Caméra ${camera.name} - ${camera.emplacement}${camera.probleme ? ' (problème: ' + camera.probleme + ')' : ''}`;
+        const note = Array.isArray(camera.actions) ? camera.actions.join(', ') : (camera.actions || '');
+        return {
+          description: description,
+          note: note,
+          qty: 1,
+          price: 0
+        };
+      });
+
+      // Préparer les données à transférer
+      const pendingData = {
+        client: {
+          name: client.name,
+          address: client.address,
+          extra: client.extra || '',
+          ifu: '' // pas d'IFU dans l'entretien
+        },
+        items: items
+      };
+
+      // Stocker dans localStorage
+      storage.set('pendingInvoiceData', pendingData);
+      showToast('Données prêtes. Redirection vers la facture...', 'success');
+      setTimeout(() => {
+        window.location.href = '../Facture/';
+      }, 1500);
+    });
+  }
+
+  // EXPORT PDF (adapté pour afficher les actions multiples)
   if (pdfBtn) {
     pdfBtn.addEventListener('click', function() {
       try {
@@ -434,16 +517,20 @@
 
         y += 40;
 
-        const tableData = cameras.map(c => [
-          c.name,
-          c.emplacement,
-          c.etat,
-          c.probleme || '-',
-          c.action || '-'
-        ]);
+        // Construction du tableau avec actions multiples
+        const tableData = cameras.map(c => {
+          const actionsStr = Array.isArray(c.actions) ? c.actions.join(', ') : (c.actions || '-');
+          return [
+            c.name,
+            c.emplacement,
+            c.etat,
+            c.probleme || '-',
+            actionsStr
+          ];
+        });
 
         doc.autoTable({
-          head: [['Caméra', 'Emplacement', 'État', 'Problème', 'Actions']],
+          head: [['Caméra', 'Emplacement', 'État', 'Problème', 'Actions recommandées']],
           body: tableData,
           startY: y,
           margin: { left: margin, right: margin },
