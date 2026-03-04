@@ -129,10 +129,8 @@
             </select>
           </div>
           <div class="form-group">
-            <label for="probleme"><i class="fas fa-exclamation-circle"></i> Problème identifié</label>
-            <select id="probleme">
-              <option value="">Sélectionner un problème</option>
-            </select>
+            <label for="probleme"><i class="fas fa-exclamation-circle"></i> Problème(s) identifié(s) (max 3)</label>
+            <div id="problemeCheckboxes" class="checkbox-group"></div>
           </div>
           <div class="form-group">
             <label for="action"><i class="fas fa-wrench"></i> Actions recommandées (max 3)</label>
@@ -165,6 +163,10 @@
               <button onclick="addAction()" class="btn-config"><i class="fas fa-plus"></i> Ajouter</button>
             </div>
           </div>
+          <div class="config-item">
+            <label>Note pour état Bon (utilisée dans la facture)</label>
+            <textarea id="bonNote" rows="3" placeholder="Saisissez la note par défaut pour les caméras en état Bon">Nettoyage des objectifs, Réglage des angles de vue, Mise à jour du firmware des caméras, Vérification enregistreurs NVR</textarea>
+          </div>
           <button onclick="resetToDefault()" class="btn-reset"><i class="fas fa-undo-alt"></i> Réinitialiser</button>
           <button id="createInvoiceBtn" class="btn-invoice"><i class="fas fa-file-invoice"></i> Créer une facture</button>
         </div>
@@ -183,7 +185,7 @@
                 <th>Caméra</th>
                 <th>Emplacement</th>
                 <th>État</th>
-                <th>Problème</th>
+                <th>Problème(s)</th>
                 <th>Actions recommandées</th>
                 <th>Gestion</th>
               </tr>
