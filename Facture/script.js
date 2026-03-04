@@ -7,7 +7,7 @@
     draft: 'invoiceDraft.v2',
     history: 'invoiceHistory.v2',
     counters: 'invoiceCounters.v2',
-    pending: 'pendingInvoiceData' // pour les données provenant de l'entretien
+    pending: 'pendingInvoiceData'
   };
 
   // État global
@@ -77,7 +77,13 @@
     const tr = document.createElement('tr');
     tr.dataset.itemId = item.id || uid();
 
-    // Colonne Description
+    // Colonne poignée
+    const tdDrag = document.createElement('td');
+    tdDrag.className = 'drag-handle';
+    tdDrag.innerHTML = '<i class="fas fa-grip-vertical"></i>';
+    tr.appendChild(tdDrag);
+
+    // Description
     const tdDesc = document.createElement('td');
     const inpDesc = document.createElement('input');
     inpDesc.type = 'text';
@@ -87,8 +93,9 @@
     inpDesc.setAttribute('list', 'itemDatalist');
     inpDesc.setAttribute('data-field', 'description');
     tdDesc.appendChild(inpDesc);
+    tr.appendChild(tdDesc);
 
-    // Colonne Note
+    // Note
     const tdNote = document.createElement('td');
     const inpNote = document.createElement('input');
     inpNote.type = 'text';
@@ -97,8 +104,9 @@
     inpNote.value = item.note || '';
     inpNote.setAttribute('data-field', 'note');
     tdNote.appendChild(inpNote);
+    tr.appendChild(tdNote);
 
-    // Colonne Quantité
+    // Quantité
     const tdQty = document.createElement('td');
     const inpQty = document.createElement('input');
     inpQty.type = 'number';
@@ -109,8 +117,9 @@
     inpQty.value = String(item.qty ?? 1);
     inpQty.setAttribute('data-field', 'qty');
     tdQty.appendChild(inpQty);
+    tr.appendChild(tdQty);
 
-    // Colonne Prix
+    // Prix
     const tdPrice = document.createElement('td');
     const inpPrice = document.createElement('input');
     inpPrice.type = 'number';
@@ -121,13 +130,15 @@
     inpPrice.value = String(item.price ?? 0);
     inpPrice.setAttribute('data-field', 'price');
     tdPrice.appendChild(inpPrice);
+    tr.appendChild(tdPrice);
 
-    // Colonne Total HT
+    // Total HT
     const tdTotal = document.createElement('td');
     tdTotal.className = 'line-total-cell';
     tdTotal.textContent = fmtMoney.format(clampNumber(item.qty) * clampNumber(item.price));
+    tr.appendChild(tdTotal);
 
-    // Colonne Actions
+    // Bouton Supprimer
     const tdActions = document.createElement('td');
     const btnDel = document.createElement('button');
     btnDel.type = 'button';
@@ -135,8 +146,14 @@
     btnDel.textContent = 'Suppr.';
     btnDel.setAttribute('data-action', 'remove-row');
     tdActions.appendChild(btnDel);
+    tr.appendChild(tdActions);
 
-    tr.append(tdDesc, tdNote, tdQty, tdPrice, tdTotal, tdActions);
+    // Écouteurs de drag & drop
+    tr.addEventListener('dragstart', handleDragStart);
+    tr.addEventListener('dragover', handleDragOver);
+    tr.addEventListener('drop', handleDrop);
+    tr.addEventListener('dragend', handleDragEnd);
+
     return tr;
   }
 
@@ -152,6 +169,47 @@
     if (refs.itemsBody.children.length === 0) {
       addItemRow({ id: uid(), description: '', note: '', qty: 1, price: 0 });
     }
+  }
+
+  // Variables pour le drag & drop
+  let draggedRow = null;
+
+  function handleDragStart(e) {
+    const target = e.target;
+    if (!target.closest('.drag-handle')) {
+      e.preventDefault();
+      return false;
+    }
+    draggedRow = this;
+    e.dataTransfer.effectAllowed = 'move';
+    this.style.opacity = '0.5';
+  }
+
+  function handleDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const targetRow = this;
+    if (targetRow !== draggedRow && targetRow.tagName === 'TR') {
+      const rect = targetRow.getBoundingClientRect();
+      const next = (e.clientY - rect.top) > (rect.height / 2);
+      const tbody = targetRow.parentNode;
+      if (next) {
+        tbody.insertBefore(draggedRow, targetRow.nextSibling);
+      } else {
+        tbody.insertBefore(draggedRow, targetRow);
+      }
+    }
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    updateTotals();
+    scheduleSave();
+  }
+
+  function handleDragEnd(e) {
+    this.style.opacity = '1';
+    draggedRow = null;
   }
 
   // Calculs
@@ -365,7 +423,6 @@
     const pending = storage.get(STORAGE.pending, null);
     if (!pending) return false;
 
-    // Remplir le client
     if (pending.client) {
       refs.clientName.value = pending.client.name || '';
       refs.clientAddress.value = pending.client.address || '';
@@ -373,9 +430,7 @@
       refs.clientIfu.value = pending.client.ifu || '';
     }
 
-    // Ajouter les lignes d'articles
     if (Array.isArray(pending.items) && pending.items.length > 0) {
-      // Vider les lignes existantes
       refs.itemsBody.innerHTML = '';
       pending.items.forEach(item => {
         addItemRow({
@@ -388,15 +443,12 @@
       });
     }
 
-    // Supprimer les données en attente
     storage.remove(STORAGE.pending);
     showToast('Données du rapport de maintenance chargées.', 'success');
     return true;
   }
 
-  // ... (le reste du script, identique à la version précédente, avec les fonctions d'historique, export PDF, etc.)
-
-  // Historique, export PDF, etc. (inchangés) – je les inclus ici pour complétude
+  // Historique
   function getHistory() {
     const hist = storage.get(STORAGE.history, []);
     return Array.isArray(hist) ? hist : [];
@@ -542,6 +594,7 @@
     showToast('🗑 Document supprimé', 'success');
   }
 
+  // Validation avant export
   function validateBeforeExport() {
     if (!refs.docDate.value) refs.docDate.value = todayISO();
 
@@ -569,6 +622,7 @@
     return true;
   }
 
+  // Export PDF
   function cleanSpaces(str) {
     return String(str).replace(/[\s\u00A0\u202F\u2000-\u200A]/g, ' ');
   }
@@ -592,15 +646,15 @@
     const margin = 15;
 
     doc.setFillColor(30, 60, 114);
-    doc.rect(0, 0, pageW, 45, 'F');
+    doc.rect(0, 0, pageW, 35, 'F'); // Bandeau un peu réduit
 
     let logoEndX = margin;
     if (state.logoDataURL) {
       try {
         const mime = getDataUrlMime(state.logoDataURL);
         const type = (mime === 'image/png') ? 'PNG' : 'JPEG';
-        doc.addImage(state.logoDataURL, type, margin, 8, 28, 28, undefined, 'FAST');
-        logoEndX = margin + 32;
+        doc.addImage(state.logoDataURL, type, margin, 6, 24, 24, undefined, 'FAST');
+        logoEndX = margin + 28;
       } catch (e) {
         showToast('Le logo n’a pas pu être intégré au PDF.', 'warning');
       }
@@ -608,31 +662,29 @@
 
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(13);
-    doc.text(refs.emitterName.value || 'Votre entreprise', logoEndX, 16);
-
+    doc.setFontSize(12);
+    doc.text(refs.emitterName.value || 'Votre entreprise', logoEndX, 12);
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.5);
-    doc.text(refs.emitterAddress.value || '', logoEndX, 22);
-    doc.text(refs.emitterExtra.value || '', logoEndX, 27);
-    doc.text(refs.emitterTel.value || '', logoEndX, 32);
+    doc.setFontSize(8);
+    doc.text(refs.emitterAddress.value || '', logoEndX, 18);
+    doc.text(refs.emitterExtra.value || '', logoEndX, 22);
+    doc.text(refs.emitterTel.value || '', logoEndX, 26);
 
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(20);
+    doc.setFontSize(18);
     const title = refs.docTitle.textContent;
-    doc.text(title, pageW - margin, 18, { align: 'right' });
-
+    doc.text(title, pageW - margin, 12, { align: 'right' });
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.5);
-    doc.text(`N° ${refs.docNumber.value}`, pageW - margin, 28, { align: 'right' });
-    doc.text(`Date : ${refs.docDate.value}`, pageW - margin, 34, { align: 'right' });
+    doc.setFontSize(8);
+    doc.text(`N° ${refs.docNumber.value}`, pageW - margin, 20, { align: 'right' });
+    doc.text(`Date : ${refs.docDate.value}`, pageW - margin, 26, { align: 'right' });
 
-    let y = 48;
+    let y = 45;
     doc.setFillColor(232, 238, 255);
-    doc.roundedRect(margin, y, pageW - margin * 2, 34, 3, 3, 'F');
+    doc.roundedRect(margin, y, pageW - margin * 2, 32, 3, 3, 'F');
     doc.setDrawColor(42, 82, 152);
     doc.setLineWidth(0.8);
-    doc.line(margin, y, margin, y + 34);
+    doc.line(margin, y, margin, y + 32);
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(7);
@@ -642,14 +694,13 @@
     doc.setTextColor(10, 10, 40);
     doc.setFontSize(9.5);
     doc.text(refs.clientName.value || '', margin + 4, y + 13);
-
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.5);
     doc.text(refs.clientAddress.value || '', margin + 4, y + 19);
     doc.text(refs.clientExtra.value || '', margin + 4, y + 25);
     if (refs.clientIfu.value) doc.text(`IFU : ${refs.clientIfu.value}`, margin + 4, y + 31);
 
-    y += 42;
+    y += 40;
 
     const tableData = [];
     for (const tr of refs.itemsBody.rows) {
@@ -736,6 +787,7 @@
     showToast('PDF téléchargé.', 'success');
   }
 
+  // Export Excel
   function exportExcel() {
     if (!validateBeforeExport()) return;
 
@@ -790,6 +842,7 @@
     showToast('Excel téléchargé.', 'success');
   }
 
+  // Nouveau document
   function newDocument() {
     if (!confirm('Créer un nouveau document ?\n\nOK : sauvegarde l\'actuel dans l\'historique puis repart à zéro.')) return;
 
@@ -808,273 +861,4 @@
     refs.docNumber.value = generateNextNumber('proforma');
 
     refs.clientName.value = '';
-    refs.clientAddress.value = '';
-    refs.clientExtra.value = '';
-    refs.clientIfu.value = '';
-
-    refs.itemsBody.innerHTML = '';
-    addItemRow({ id: uid(), description: '', note: '', qty: 1, price: 0 }, { focus: true });
-
-    updateCurrencyDisplay();
-    updateTotals();
-    saveDraft();
-
-    showToast('Nouveau document prêt.', 'success');
-  }
-
-  const STORAGE_CLIENTS = 'invoiceClients.v2';
-  const STORAGE_ITEMS = 'invoiceItems.v2';
-
-  function updateStoredClientsAndItems() {
-    const clients = storage.get(STORAGE_CLIENTS, []);
-    const items = storage.get(STORAGE_ITEMS, []);
-
-    const clientName = refs.clientName.value.trim();
-    if (clientName) {
-      const clientData = {
-        name: clientName,
-        address: refs.clientAddress.value.trim(),
-        extra: refs.clientExtra.value.trim(),
-        ifu: refs.clientIfu.value.trim()
-      };
-      const idx = clients.findIndex(c => c.name.toLowerCase() === clientName.toLowerCase());
-      if (idx >= 0) clients[idx] = clientData;
-      else clients.unshift(clientData);
-      if (clients.length > 50) clients.pop();
-    }
-
-    const seenDescriptions = new Set();
-    for (const tr of refs.itemsBody.rows) {
-      const desc = tr.querySelector('[data-field="description"]').value.trim();
-      if (!desc) continue;
-      if (seenDescriptions.has(desc)) continue;
-      seenDescriptions.add(desc);
-
-      const price = clampNumber(tr.querySelector('[data-field="price"]').value);
-      if (price > 0) {
-        const itemData = { description: desc, price };
-        const idx = items.findIndex(i => i.description.toLowerCase() === desc.toLowerCase());
-        if (idx >= 0) items[idx] = itemData;
-        else items.unshift(itemData);
-      }
-    }
-    if (items.length > 100) items.length = 100;
-
-    storage.set(STORAGE_CLIENTS, clients);
-    storage.set(STORAGE_ITEMS, items);
-    renderClientDatalist();
-    renderItemDatalist();
-  }
-
-  function escapeHtml(str) {
-    return String(str).replace(/[&<>"]/g, function(m) {
-      if (m === '&') return '&amp;';
-      if (m === '<') return '&lt;';
-      if (m === '>') return '&gt;';
-      if (m === '"') return '&quot;';
-      return m;
-    });
-  }
-
-  function renderClientDatalist() {
-    let datalist = $('#clientDatalist');
-    if (!datalist) {
-      datalist = document.createElement('datalist');
-      datalist.id = 'clientDatalist';
-      document.body.appendChild(datalist);
-      refs.clientName.setAttribute('list', 'clientDatalist');
-    }
-    const clients = storage.get(STORAGE_CLIENTS, []);
-    datalist.innerHTML = clients.map(c => `<option value="${escapeHtml(c.name)}">`).join('');
-  }
-
-  function renderItemDatalist() {
-    let datalist = $('#itemDatalist');
-    if (!datalist) {
-      datalist = document.createElement('datalist');
-      datalist.id = 'itemDatalist';
-      document.body.appendChild(datalist);
-    }
-    const items = storage.get(STORAGE_ITEMS, []);
-    datalist.innerHTML = items.map(i => `<option value="${escapeHtml(i.description)}">`).join('');
-    $$('#itemsBody [data-field="description"]').forEach(inp => inp.setAttribute('list', 'itemDatalist'));
-  }
-
-  function fillClientFromName(clientName) {
-    const clients = storage.get(STORAGE_CLIENTS, []);
-    const client = clients.find(c => c.name.toLowerCase() === clientName.toLowerCase());
-    if (client) {
-      refs.clientName.value = client.name;
-      refs.clientAddress.value = client.address || '';
-      refs.clientExtra.value = client.extra || '';
-      refs.clientIfu.value = client.ifu || '';
-      scheduleSave();
-    }
-  }
-
-  function fillItemPriceFromDescription(descInput) {
-    const desc = descInput.value.trim();
-    if (!desc) return;
-    const items = storage.get(STORAGE_ITEMS, []);
-    const item = items.find(i => i.description.toLowerCase() === desc.toLowerCase());
-    if (item) {
-      const row = descInput.closest('tr');
-      if (row) {
-        const priceInput = row.querySelector('[data-field="price"]');
-        if (priceInput) {
-          priceInput.value = item.price;
-          updateTotals();
-          scheduleSave();
-        }
-      }
-    }
-  }
-
-  function setupPhoneValidation() {
-    const phoneInput = refs.emitterTel;
-    phoneInput.addEventListener('input', function(e) {
-      let val = this.value;
-      val = val.replace(/[^\d+]/g, '');
-      if (val.indexOf('+') > 0) val = val.replace(/\+/g, '');
-      if (val.startsWith('+')) {
-        val = '+' + val.slice(1).replace(/\+/g, '');
-      }
-      this.value = val;
-    });
-    phoneInput.addEventListener('blur', function() {
-      if (!this.value.trim()) {
-        this.value = '+229';
-      } else if (!this.value.startsWith('+')) {
-        this.value = '+229' + this.value.replace(/^\+?/, '');
-      }
-    });
-    if (!phoneInput.value) phoneInput.value = '+229';
-  }
-
-  function bindEvents() {
-    refs.btnProforma.addEventListener('click', () => setMode('proforma'));
-    refs.btnFacture.addEventListener('click', () => setMode('facture'));
-
-    refs.btnHistory.addEventListener('click', () => {
-      if (refs.historyOverlay.classList.contains('open')) {
-        closeHistory();
-      } else {
-        openHistory();
-      }
-    });
-
-    refs.btnArchive.addEventListener('click', () => {
-      if (state.archiveButtonDisabled) return;
-      state.archiveButtonDisabled = true;
-      archiveCurrentDocument();
-      setTimeout(() => { state.archiveButtonDisabled = false; }, 1000);
-    });
-
-    refs.btnNew.addEventListener('click', newDocument);
-    refs.btnPdf.addEventListener('click', exportPDF);
-    refs.btnExcel.addEventListener('click', exportExcel);
-
-    refs.btnCloseHistory.addEventListener('click', closeHistory);
-    refs.historyOverlay.addEventListener('click', (e) => {
-      if (e.target === refs.historyOverlay) closeHistory();
-    });
-    refs.historySearch.addEventListener('input', renderHistory);
-
-    refs.addRow.addEventListener('click', () => {
-      addItemRow({ id: uid(), description: '', note: '', qty: 1, price: 0 }, { focus: true });
-    });
-
-    refs.itemsBody.addEventListener('input', (e) => {
-      const field = e.target?.getAttribute?.('data-field');
-      if (!field) return;
-      if (field === 'qty' || field === 'price') {
-        const v = clampNumber(e.target.value);
-        e.target.value = String(v);
-      }
-      updateTotals();
-      scheduleSave();
-    });
-
-    refs.itemsBody.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-action="remove-row"]');
-      if (!btn) return;
-      const tr = btn.closest('tr');
-      if (!tr) return;
-      tr.remove();
-      ensureAtLeastOneRow();
-      updateTotals();
-      scheduleSave();
-    });
-
-    [
-      refs.emitterName, refs.emitterAddress, refs.emitterExtra, refs.emitterTel,
-      refs.clientName, refs.clientAddress, refs.clientExtra, refs.clientIfu,
-      refs.docNumber, refs.docDate,
-      refs.currency, refs.vatRate
-    ].forEach(el => el.addEventListener('input', (e) => {
-      if (e.target.id === 'currency') updateCurrencyDisplay();
-      if (e.target.id === 'vatRate') updateTotals();
-      if (e.target.id === 'emitterName') refs.footerBrand.textContent = refs.emitterName.value || 'Votre entreprise';
-      if (e.target.id === 'docDate') {
-        const cur = (refs.docNumber.value || '').trim();
-        if (/^(PF|F)-\d{4}-\d{3,}$/i.test(cur)) {
-          refs.docNumber.value = normalizeDocNumber(cur.replace(/-(\d{4})-/, `-${getYearForCounter()}-`), state.mode);
-        }
-      }
-      scheduleSave();
-    }));
-
-    refs.logoUpload.addEventListener('change', async (e) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      try {
-        const dataUrl = await downscaleImageToDataURL(file, { max: 360, quality: 0.86 });
-        state.logoDataURL = dataUrl;
-        refs.logoPreview.src = dataUrl;
-        refs.logoPreview.style.display = 'block';
-        refs.logoPlaceholder.style.display = 'none';
-        scheduleSave();
-        showToast('Logo ajouté.', 'success');
-      } catch {
-        showToast('Impossible de charger le logo.', 'error');
-      }
-    });
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && refs.historyOverlay.classList.contains('open')) closeHistory();
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
-        e.preventDefault();
-        saveDraft();
-        showToast('Brouillon sauvegardé.', 'success');
-      }
-    });
-
-    refs.clientName.addEventListener('change', function() {
-      fillClientFromName(this.value);
-    });
-
-    refs.itemsBody.addEventListener('change', function(e) {
-      if (e.target.matches('[data-field="description"]')) {
-        fillItemPriceFromDescription(e.target);
-      }
-    });
-
-    // Vérifier les données en attente au chargement
-    if (loadPendingInvoiceData()) {
-      // Les données ont été chargées
-    }
-  }
-
-  function init() {
-    bindEvents();
-    loadDraft();
-    updateCurrencyDisplay();
-    updateTotals();
-    renderClientDatalist();
-    renderItemDatalist();
-    setupPhoneValidation();
-    scheduleSave();
-  }
-
-  init();
-})();
+    ref
