@@ -21,8 +21,8 @@
       <a href="../" class="nav-brand"><i class="fas fa-camera-retro"></i> CamSuite</a>
       <ul class="nav-links">
         <li><a href="../"><i class="fas fa-home"></i> Accueil</a></li>
-        <li><a href="../entretien/" class="active"><i class="fas fa-tools"></i> Entretien</a></li>
-        <li><a href="../facture/"><i class="fas fa-file-invoice"></i> Facturation</a></li>
+        <li><a href="../Entretien/" class="active"><i class="fas fa-tools"></i> Entretien</a></li>
+        <li><a href="../Facture/"><i class="fas fa-file-invoice"></i> Pro forma / Facture</a></li>
         <li class="color-picker">
           <label for="themeColor"><i class="fas fa-palette"></i></label>
           <input type="color" id="themeColor" value="#1e3c72">
@@ -135,10 +135,8 @@
             </select>
           </div>
           <div class="form-group">
-            <label for="action"><i class="fas fa-wrench"></i> Actions recommandées</label>
-            <select id="action">
-              <option value="">Sélectionner une action</option>
-            </select>
+            <label for="action"><i class="fas fa-wrench"></i> Actions recommandées (max 3)</label>
+            <div id="actionsCheckboxes" class="checkbox-group"></div>
           </div>
           <button type="submit" class="btn-submit"><i class="fas fa-save"></i> Enregistrer</button>
         </form>
@@ -168,6 +166,7 @@
             </div>
           </div>
           <button onclick="resetToDefault()" class="btn-reset"><i class="fas fa-undo-alt"></i> Réinitialiser</button>
+          <button id="createInvoiceBtn" class="btn-invoice"><i class="fas fa-file-invoice"></i> Créer une facture</button>
         </div>
       </div>
 
@@ -180,12 +179,12 @@
           <table id="camerasTable">
             <thead>
               <tr>
-                <th></th> <!-- Colonne pour la poignée de déplacement -->
+                <th></th>
                 <th>Caméra</th>
                 <th>Emplacement</th>
                 <th>État</th>
                 <th>Problème</th>
-                <th>Actions</th>
+                <th>Actions recommandées</th>
                 <th>Gestion</th>
               </tr>
             </thead>
@@ -238,4 +237,3 @@
   </script>
 </body>
 </html>
-
