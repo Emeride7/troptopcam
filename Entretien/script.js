@@ -8,8 +8,14 @@
     cameras: [
       { id: 1, name: 'Camera 1', emplacement: 'Extérieur Gauche', etat: 'Bon', problemes: ['RAS'], actions: [], lastModified: new Date().toISOString() },
       { id: 2, name: 'Camera 2', emplacement: 'Piscine', etat: 'Bon', problemes: ['RAS'], actions: [], lastModified: new Date().toISOString() },
-      // ... autres caméras avec problemes (tableau) au lieu de probleme (string)
+      { id: 3, name: 'Camera 3', emplacement: 'Couloir Cuisine', etat: 'Bon', problemes: ['RAS'], actions: [], lastModified: new Date().toISOString() },
+      { id: 4, name: 'Camera 4', emplacement: 'Couloir Gauche', etat: 'Bon', problemes: ['RAS'], actions: [], lastModified: new Date().toISOString() },
+      { id: 5, name: 'Camera 5', emplacement: 'Montée Escalier', etat: 'Bon', problemes: ['RAS'], actions: [], lastModified: new Date().toISOString() },
+      { id: 6, name: 'Camera 6', emplacement: 'Hal R+1', etat: 'Bon', problemes: ['RAS'], actions: [], lastModified: new Date().toISOString() },
+      { id: 7, name: 'Camera 7', emplacement: 'Couloir Piscine', etat: 'Bon', problemes: ['RAS'], actions: [], lastModified: new Date().toISOString() },
       { id: 8, name: 'Camera 8', emplacement: 'Jardin', etat: 'Pas Bon', problemes: ['Camera court circuité à cause de l\'eau de pluie'], actions: ['Remplacement des caméras'], lastModified: new Date().toISOString() },
+      { id: 9, name: 'Camera 9', emplacement: 'Parking', etat: 'Pas Bon', problemes: ['Connecteurs endommagés'], actions: ['Remplacement de connecteurs endommagés'], lastModified: new Date().toISOString() },
+      { id: 10, name: 'Camera 10', emplacement: 'Extérieur Droit', etat: 'Pas Bon', problemes: ['Problème de connexion'], actions: ['Vérification câblage', 'Reconfiguration réseau'], lastModified: new Date().toISOString() },
       { id: 11, name: 'Camera 11', emplacement: 'Hall Rez', etat: 'Pas Bon', problemes: ['Connecteurs endommagés'], actions: ['Remplacement de connecteurs endommagés'], lastModified: new Date().toISOString() }
     ],
     emplacements: [
@@ -41,7 +47,6 @@
       'Remplacement disque dur',
       'Nettoyage ventilateur'
     ],
-    // Table de correspondance problèmes -> actions (codée en dur)
     problemActionMap: {
       'Camera court circuité à cause de l\'eau de pluie': ['Remplacement des caméras'],
       'Connecteurs endommagés': ['Remplacement de connecteurs endommagés'],
@@ -58,7 +63,6 @@
 
   // Chargement des données
   let appData = storage.get('cameraMaintenanceData') || defaultData;
-  // Fusionner les tableaux (au cas où)
   if (!Array.isArray(appData.emplacements)) appData.emplacements = defaultData.emplacements;
   if (!Array.isArray(appData.problemes)) appData.problemes = defaultData.problemes;
   if (!Array.isArray(appData.actions)) appData.actions = defaultData.actions;
@@ -165,14 +169,14 @@
       checkbox.value = prob;
       checkbox.checked = selectedProblemes.includes(prob);
       checkbox.addEventListener('change', function(e) {
-        // Limiter à 3 sélections
         const checkboxes = problemeCheckboxesDiv.querySelectorAll('input[type="checkbox"]');
         const checked = Array.from(checkboxes).filter(cb => cb.checked);
         if (checked.length > 3) {
           this.checked = false;
           showToast('Vous ne pouvez sélectionner que 3 problèmes maximum.', 'warning');
         }
-        // Si l'état est "Bon", on force la déselection et on remet "RAS" ? On gère via l'événement sur etatSelect
+        // Mise à jour des actions automatiques
+        updateActionsFromProblemes();
       });
       label.appendChild(checkbox);
       label.appendChild(document.createTextNode(' ' + prob));
@@ -192,7 +196,6 @@
       checkbox.value = action;
       checkbox.checked = selectedActions.includes(action);
       checkbox.addEventListener('change', function(e) {
-        // Limiter à 3 sélections
         const checkboxes = actionsCheckboxesDiv.querySelectorAll('input[type="checkbox"]');
         const checked = Array.from(checkboxes).filter(cb => cb.checked);
         if (checked.length > 3) {
@@ -230,22 +233,14 @@
     }
   }
 
-  // Écouter les changements sur les cases de problèmes
-  if (problemeCheckboxesDiv) {
-    problemeCheckboxesDiv.addEventListener('change', updateActionsFromProblemes);
-  }
-
-  // Quand l'état change : si "Bon", forcer le problème à "RAS" et désactiver les autres ?
+  // Quand l'état change : si "Bon", forcer le problème à "RAS" et désactiver les autres
   etatSelect.addEventListener('change', function() {
     if (this.value === 'Bon') {
-      // Décocher tous les problèmes sauf "RAS"
       const checkboxes = problemeCheckboxesDiv.querySelectorAll('input[type="checkbox"]');
       checkboxes.forEach(cb => {
         if (cb.value === 'RAS') cb.checked = true;
         else cb.checked = false;
       });
-      // Forcer les actions ? On laisse l'utilisateur choisir, mais on peut suggérer des actions d'entretien
-      // Optionnel : cocher quelques actions par défaut ? On ne fait rien.
     }
   });
 
@@ -276,7 +271,6 @@
 
   function handleDrop(e) {
     e.preventDefault();
-    // Mettre à jour l'ordre des caméras
     const newOrder = [];
     for (const row of camerasTableBody.rows) {
       const id = parseInt(row.dataset.id);
@@ -300,14 +294,11 @@
       row.draggable = true;
       row.dataset.id = camera.id;
 
-      // Cellule de la poignée
       const cellDrag = row.insertCell(0);
       cellDrag.classList.add('drag-handle');
       cellDrag.innerHTML = '<i class="fas fa-grip-vertical"></i>';
 
-      // Problèmes sous forme de liste
       const problemesStr = Array.isArray(camera.problemes) ? camera.problemes.join(', ') : (camera.problemes || '-');
-      // Actions sous forme de liste
       const actionsStr = Array.isArray(camera.actions) ? camera.actions.join(', ') : (camera.actions || '-');
 
       row.innerHTML += `
@@ -340,10 +331,8 @@
     e.preventDefault();
 
     const id = cameraId.value;
-    // Récupérer les problèmes cochés
     const problemeCheckboxes = problemeCheckboxesDiv.querySelectorAll('input[type="checkbox"]:checked');
     const selectedProblemes = Array.from(problemeCheckboxes).map(cb => cb.value);
-    // Récupérer les actions cochées
     const actionCheckboxes = actionsCheckboxesDiv.querySelectorAll('input[type="checkbox"]:checked');
     const selectedActions = Array.from(actionCheckboxes).map(cb => cb.value);
 
@@ -516,12 +505,11 @@
         return;
       }
 
-      // Construire les lignes de prestations pour la facture
       const items = cameras.map(camera => {
         let description, note;
         if (camera.etat === 'Bon') {
           description = 'Maintenance et Entretien';
-          note = bonNote; // Utiliser la note configurable
+          note = bonNote;
         } else {
           description = `Caméra ${camera.name} - ${camera.emplacement}${camera.problemes && camera.problemes.length ? ' (problème: ' + camera.problemes.join(', ') + ')' : ''}`;
           note = Array.isArray(camera.actions) ? camera.actions.join(', ') : (camera.actions || '');
@@ -552,7 +540,7 @@
     });
   }
 
-  // EXPORT PDF (adapté pour problèmes multiples et actions)
+  // EXPORT PDF (bandeau réduit)
   if (pdfBtn) {
     pdfBtn.addEventListener('click', function() {
       try {
@@ -568,14 +556,15 @@
         const primaryColor = [30, 60, 114];
         const secondaryColor = [42, 82, 152];
 
+        // Bandeau supérieur réduit à 30 mm
         doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-        doc.rect(0, 0, pageW, 45, 'F');
+        doc.rect(0, 0, pageW, 30, 'F');
 
         let leftX = margin;
         if (company.logo) {
           try {
-            doc.addImage(company.logo, 'JPEG', margin, 8, 28, 28, undefined, 'FAST');
-            leftX = margin + 32;
+            doc.addImage(company.logo, 'JPEG', margin, 5, 20, 20, undefined, 'FAST');
+            leftX = margin + 24;
           } catch (e) {
             showToast('Le logo n’a pas pu être intégré au PDF.', 'warning');
           }
@@ -583,22 +572,22 @@
 
         doc.setTextColor(255, 255, 255);
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(12);
-        doc.text(companyName.value || 'Prestataire', leftX, 16);
+        doc.setFontSize(11);
+        doc.text(companyName.value || 'Prestataire', leftX, 12);
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.text(companyAddress.value || '', leftX, 22);
-        doc.text(companyExtra.value || '', leftX, 27);
-        doc.text(companyTel.value || '', leftX, 32);
+        doc.setFontSize(8);
+        doc.text(companyAddress.value || '', leftX, 18);
+        doc.text(companyExtra.value || '', leftX, 22);
+        doc.text(companyTel.value || '', leftX, 26);
 
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(18);
-        doc.text('RAPPORT DE MAINTENANCE', pageW - margin, 18, { align: 'right' });
-        doc.setFontSize(10);
+        doc.setFontSize(16);
+        doc.text('RAPPORT DE MAINTENANCE', pageW - margin, 12, { align: 'right' });
+        doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
-        doc.text(`Émis le : ${todayISO()}`, pageW - margin, 28, { align: 'right' });
+        doc.text(`Émis le : ${todayISO()}`, pageW - margin, 20, { align: 'right' });
 
-        let y = 55;
+        let y = 38; // Ajusté après bandeau
         doc.setTextColor(0, 0, 0);
         doc.setFillColor(232, 238, 255);
         doc.roundedRect(margin, y, pageW - margin * 2, 32, 3, 3, 'F');
