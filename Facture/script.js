@@ -6,7 +6,8 @@
   const STORAGE = {
     draft: 'invoiceDraft.v2',
     history: 'invoiceHistory.v2',
-    counters: 'invoiceCounters.v2'
+    counters: 'invoiceCounters.v2',
+    pending: 'pendingInvoiceData' // pour les données provenant de l'entretien
   };
 
   // État global
@@ -87,7 +88,7 @@
     inpDesc.setAttribute('data-field', 'description');
     tdDesc.appendChild(inpDesc);
 
-    // Colonne Note (AJOUT NOTE)
+    // Colonne Note
     const tdNote = document.createElement('td');
     const inpNote = document.createElement('input');
     inpNote.type = 'text';
@@ -135,7 +136,7 @@
     btnDel.setAttribute('data-action', 'remove-row');
     tdActions.appendChild(btnDel);
 
-    tr.append(tdDesc, tdNote, tdQty, tdPrice, tdTotal, tdActions); // AJOUT NOTE
+    tr.append(tdDesc, tdNote, tdQty, tdPrice, tdTotal, tdActions);
     return tr;
   }
 
@@ -153,7 +154,7 @@
     }
   }
 
-  // Calculs (inchangés car la note n'affecte pas les totaux)
+  // Calculs
   function computeSubtotal() {
     let subtotal = 0;
     for (const tr of refs.itemsBody.rows) {
@@ -191,7 +192,7 @@
     $$('.curr').forEach(el => el.textContent = curr);
   }
 
-  // Mode et numérotation (inchangé)
+  // Mode et numérotation
   function setMode(mode) {
     state.mode = mode;
     refs.docTitle.textContent = mode === 'facture' ? 'FACTURE' : 'PRO FORMA';
@@ -243,14 +244,14 @@
     return `${prefix}-${year}-${pad3(next)}`;
   }
 
-  // Collecte des données (avec note)
+  // Collecte des données
   function collectData() {
     const items = [];
     for (const tr of refs.itemsBody.rows) {
       items.push({
         id: tr.dataset.itemId || uid(),
         description: tr.querySelector('[data-field="description"]').value || '',
-        note: tr.querySelector('[data-field="note"]').value || '', // AJOUT NOTE
+        note: tr.querySelector('[data-field="note"]').value || '',
         qty: clampNumber(tr.querySelector('[data-field="qty"]').value),
         price: clampNumber(tr.querySelector('[data-field="price"]').value)
       });
@@ -281,7 +282,6 @@
     };
   }
 
-  // Application des données (avec note)
   function applyData(data) {
     state.draftId = data?.id || uid();
     
@@ -330,7 +330,7 @@
     renderItemDatalist();
   }
 
-  // Sauvegarde automatique (inchangée)
+  // Sauvegarde automatique
   function scheduleSave() {
     clearTimeout(state._saveTimer);
     state._saveTimer = setTimeout(saveDraft, 450);
@@ -360,7 +360,43 @@
     });
   }
 
-  // Historique (inchangé)
+  // Chargement des données en attente depuis l'entretien
+  function loadPendingInvoiceData() {
+    const pending = storage.get(STORAGE.pending, null);
+    if (!pending) return false;
+
+    // Remplir le client
+    if (pending.client) {
+      refs.clientName.value = pending.client.name || '';
+      refs.clientAddress.value = pending.client.address || '';
+      refs.clientExtra.value = pending.client.extra || '';
+      refs.clientIfu.value = pending.client.ifu || '';
+    }
+
+    // Ajouter les lignes d'articles
+    if (Array.isArray(pending.items) && pending.items.length > 0) {
+      // Vider les lignes existantes
+      refs.itemsBody.innerHTML = '';
+      pending.items.forEach(item => {
+        addItemRow({
+          id: uid(),
+          description: item.description,
+          note: item.note,
+          qty: item.qty || 1,
+          price: item.price || 0
+        });
+      });
+    }
+
+    // Supprimer les données en attente
+    storage.remove(STORAGE.pending);
+    showToast('Données du rapport de maintenance chargées.', 'success');
+    return true;
+  }
+
+  // ... (le reste du script, identique à la version précédente, avec les fonctions d'historique, export PDF, etc.)
+
+  // Historique, export PDF, etc. (inchangés) – je les inclus ici pour complétude
   function getHistory() {
     const hist = storage.get(STORAGE.history, []);
     return Array.isArray(hist) ? hist : [];
@@ -506,7 +542,6 @@
     showToast('🗑 Document supprimé', 'success');
   }
 
-  // Validation avant export (inchangée)
   function validateBeforeExport() {
     if (!refs.docDate.value) refs.docDate.value = todayISO();
 
@@ -534,7 +569,6 @@
     return true;
   }
 
-  // Export PDF avec note
   function cleanSpaces(str) {
     return String(str).replace(/[\s\u00A0\u202F\u2000-\u200A]/g, ' ');
   }
@@ -617,11 +651,10 @@
 
     y += 42;
 
-    // Construction du tableau avec note
     const tableData = [];
     for (const tr of refs.itemsBody.rows) {
       const desc = tr.querySelector('[data-field="description"]').value || '';
-      const note = tr.querySelector('[data-field="note"]').value || ''; // AJOUT NOTE
+      const note = tr.querySelector('[data-field="note"]').value || '';
       const qty = clampNumber(tr.querySelector('[data-field="qty"]').value);
       const price = clampNumber(tr.querySelector('[data-field="price"]').value);
       const tot = qty * price;
@@ -629,7 +662,7 @@
     }
 
     doc.autoTable({
-      head: [['Description', 'Note', 'Qté', 'Prix unitaire HT', 'Total HT']], // AJOUT NOTE
+      head: [['Description', 'Note', 'Qté', 'Prix unitaire HT', 'Total HT']],
       body: tableData,
       startY: y,
       margin: { left: margin, right: margin },
@@ -638,7 +671,7 @@
       headStyles: { fillColor: [30, 60, 114], textColor: 255, fontStyle: 'bold' },
       columnStyles: {
         0: { cellWidth: 'auto' },
-        1: { cellWidth: 35 }, // largeur pour la note
+        1: { cellWidth: 35 },
         2: { halign: 'right', cellWidth: 20 },
         3: { halign: 'right', cellWidth: 40 },
         4: { halign: 'right', cellWidth: 38 }
@@ -703,7 +736,6 @@
     showToast('PDF téléchargé.', 'success');
   }
 
-  // Export Excel avec note
   function exportExcel() {
     if (!validateBeforeExport()) return;
 
@@ -728,12 +760,12 @@
       [refs.clientExtra.value || ''],
       ...(refs.clientIfu.value ? [['IFU', refs.clientIfu.value]] : []),
       [],
-      ['Description', 'Note', 'Quantité', `Prix unitaire HT (${curr})`, `Total HT (${curr})`] // AJOUT NOTE
+      ['Description', 'Note', 'Quantité', `Prix unitaire HT (${curr})`, `Total HT (${curr})`]
     ];
 
     for (const tr of refs.itemsBody.rows) {
       const desc = tr.querySelector('[data-field="description"]').value || '';
-      const note = tr.querySelector('[data-field="note"]').value || ''; // AJOUT NOTE
+      const note = tr.querySelector('[data-field="note"]').value || '';
       const qty = clampNumber(tr.querySelector('[data-field="qty"]').value);
       const price = clampNumber(tr.querySelector('[data-field="price"]').value);
       data.push([desc, note, qty, price, qty * price]);
@@ -751,14 +783,13 @@
     data.push(['Signature : _________________________________']);
 
     const ws = XLSX.utils.aoa_to_sheet(data);
-    ws['!cols'] = [{ wch: 30 }, { wch: 20 }, { wch: 12 }, { wch: 18 }, { wch: 18 }]; // Ajusté pour la note
+    ws['!cols'] = [{ wch: 30 }, { wch: 20 }, { wch: 12 }, { wch: 18 }, { wch: 18 }];
     XLSX.utils.book_append_sheet(wb, ws, 'Document');
 
     XLSX.writeFile(wb, `${refs.docTitle.textContent}_${refs.docNumber.value}.xlsx`);
     showToast('Excel téléchargé.', 'success');
   }
 
-  // Nouveau document (inchangé)
   function newDocument() {
     if (!confirm('Créer un nouveau document ?\n\nOK : sauvegarde l\'actuel dans l\'historique puis repart à zéro.')) return;
 
@@ -791,7 +822,6 @@
     showToast('Nouveau document prêt.', 'success');
   }
 
-  // Autocomplétion (inchangée, la note n'est pas sauvegardée dans l'historique des articles)
   const STORAGE_CLIENTS = 'invoiceClients.v2';
   const STORAGE_ITEMS = 'invoiceItems.v2';
 
@@ -921,7 +951,6 @@
     if (!phoneInput.value) phoneInput.value = '+229';
   }
 
-  // Gestionnaires d'événements (inchangés, mais la note est prise en compte dans l'input)
   function bindEvents() {
     refs.btnProforma.addEventListener('click', () => setMode('proforma'));
     refs.btnFacture.addEventListener('click', () => setMode('facture'));
@@ -951,7 +980,6 @@
     });
     refs.historySearch.addEventListener('input', renderHistory);
 
-    // Bouton Ajouter une ligne
     refs.addRow.addEventListener('click', () => {
       addItemRow({ id: uid(), description: '', note: '', qty: 1, price: 0 }, { focus: true });
     });
@@ -1030,9 +1058,13 @@
         fillItemPriceFromDescription(e.target);
       }
     });
+
+    // Vérifier les données en attente au chargement
+    if (loadPendingInvoiceData()) {
+      // Les données ont été chargées
+    }
   }
 
-  // Initialisation
   function init() {
     bindEvents();
     loadDraft();
