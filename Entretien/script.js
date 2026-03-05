@@ -116,6 +116,9 @@
   const bonNoteTextarea = document.getElementById('bonNote');
   const toast = document.getElementById('toast');
 
+  // Vérification des éléments essentiels
+  if (!createInvoiceBtn) console.error("Bouton #createInvoiceBtn introuvable !");
+
   // Initialiser la zone de texte de la note Bon
   if (bonNoteTextarea) bonNoteTextarea.value = bonNote;
 
@@ -470,13 +473,15 @@
 
   // Sauvegarde automatique
   [companyName, companyAddress, companyExtra, companyTel, clientName, clientAddress, clientExtra, clientTel].forEach(input => {
-    input.addEventListener('input', () => saveToLocalStorage());
+    if (input) input.addEventListener('input', () => saveToLocalStorage());
   });
 
   // Gestion du logo
-  companyLogoPlaceholder.addEventListener('click', () => {
-    companyLogoUpload.click();
-  });
+  if (companyLogoPlaceholder) {
+    companyLogoPlaceholder.addEventListener('click', () => {
+      companyLogoUpload.click();
+    });
+  }
 
   companyLogoUpload.addEventListener('change', async (e) => {
     const file = e.target.files?.[0];
@@ -493,7 +498,7 @@
     }
   });
 
-  // Création d'une facture à partir du rapport
+  // Création d'une facture à partir du rapport (AVEC REGROUPEMENT)
   if (createInvoiceBtn) {
     createInvoiceBtn.addEventListener('click', function() {
       if (!client.name || !client.address) {
@@ -505,8 +510,12 @@
         return;
       }
 
-      const items = cameras.map(camera => {
+      // Regrouper les caméras par (description + note)
+      const groups = {};
+
+      cameras.forEach(camera => {
         let description, note;
+
         if (camera.etat === 'Bon') {
           description = 'Maintenance et Entretien';
           note = bonNote;
@@ -514,13 +523,25 @@
           description = `Caméra ${camera.name} - ${camera.emplacement}${camera.problemes && camera.problemes.length ? ' (problème: ' + camera.problemes.join(', ') + ')' : ''}`;
           note = Array.isArray(camera.actions) ? camera.actions.join(', ') : (camera.actions || '');
         }
-        return {
-          description: description,
-          note: note,
-          qty: 1,
-          price: 0
-        };
+
+        const key = `${description}||${note}`;
+
+        if (!groups[key]) {
+          groups[key] = {
+            description: description,
+            note: note,
+            qty: 0
+          };
+        }
+        groups[key].qty += 1;
       });
+
+      const items = Object.values(groups).map(group => ({
+        description: group.description,
+        note: group.note,
+        qty: group.qty,
+        price: 0
+      }));
 
       const pendingData = {
         client: {
@@ -540,7 +561,7 @@
     });
   }
 
-  // EXPORT PDF (bandeau réduit)
+  // EXPORT PDF (bandeau réduit et statistiques ajustées)
   if (pdfBtn) {
     pdfBtn.addEventListener('click', function() {
       try {
@@ -556,7 +577,6 @@
         const primaryColor = [30, 60, 114];
         const secondaryColor = [42, 82, 152];
 
-        // Bandeau supérieur réduit à 30 mm
         doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
         doc.rect(0, 0, pageW, 30, 'F');
 
@@ -587,7 +607,7 @@
         doc.setFont('helvetica', 'normal');
         doc.text(`Émis le : ${todayISO()}`, pageW - margin, 20, { align: 'right' });
 
-        let y = 38; // Ajusté après bandeau
+        let y = 38;
         doc.setTextColor(0, 0, 0);
         doc.setFillColor(232, 238, 255);
         doc.roundedRect(margin, y, pageW - margin * 2, 32, 3, 3, 'F');
@@ -644,9 +664,32 @@
         let finalY = doc.lastAutoTable.finalY + 10;
         doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
-        doc.text(`Total caméras : ${cameras.length}`, margin, finalY);
-        doc.text(`Fonctionnelles : ${cameras.filter(c => c.etat === 'Bon').length}`, margin + 80, finalY);
-        doc.text(`Non fonctionnelles : ${cameras.filter(c => c.etat === 'Pas Bon').length}`, margin + 160, finalY);
+
+        // Correction : affichage des statistiques sans débordement
+        const total = `Total caméras : ${cameras.length}`;
+        const fonctionnelles = `Fonctionnelles : ${cameras.filter(c => c.etat === 'Bon').length}`;
+        const nonFonctionnelles = `Non fonctionnelles : ${cameras.filter(c => c.etat === 'Pas Bon').length}`;
+
+        const totalWidth = doc.getTextWidth(total);
+        const fonctionnellesWidth = doc.getTextWidth(fonctionnelles);
+        const nonFonctionnellesWidth = doc.getTextWidth(nonFonctionnelles);
+        const pageWidth = pageW - margin * 2; // largeur utile
+
+        if (totalWidth + fonctionnellesWidth + nonFonctionnellesWidth > pageWidth) {
+          // Si ça dépasse, on met sur deux lignes
+          doc.text(total, margin, finalY);
+          doc.text(fonctionnelles, margin, finalY + 6);
+          doc.text(nonFonctionnelles, margin, finalY + 12);
+        } else {
+          // Sinon on les espace uniformément
+          const espace = (pageWidth - totalWidth - fonctionnellesWidth - nonFonctionnellesWidth) / 4;
+          let x = margin;
+          doc.text(total, x, finalY);
+          x += totalWidth + espace;
+          doc.text(fonctionnelles, x, finalY);
+          x += fonctionnellesWidth + espace;
+          doc.text(nonFonctionnelles, x, finalY);
+        }
 
         doc.save(`maintenance_${todayISO()}.pdf`);
         showToast('PDF téléchargé', 'success');
