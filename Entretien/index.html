@@ -1,4 +1,38 @@
-<!-- Dans la toolbar, ajouter le bouton Historique -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CamSuite - Entretien</title>
+  <!-- Google Fonts & Font Awesome -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <!-- jsPDF et autoTable -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <link rel="stylesheet" href="../assets/css/shared.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="../" class="nav-brand"><i class="fas fa-camera-retro"></i> CamSuite</a>
+      <ul class="nav-links">
+        <li><a href="../"><i class="fas fa-home"></i> Accueil</a></li>
+        <li><a href="../Entretien/" class="active"><i class="fas fa-tools"></i> Entretien</a></li>
+        <li><a href="../Facture/"><i class="fas fa-file-invoice"></i> Pro forma / Facture</a></li>
+        <li class="color-picker">
+          <label for="themeColor"><i class="fas fa-palette"></i></label>
+          <input type="color" id="themeColor" value="#1e3c72">
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Toolbar -->
+ <!-- Dans la toolbar, ajouter le bouton Historique -->
 <div class="toolbar-actions">
   <button class="btn-history" id="btnHistoryMaintenance"><i class="fas fa-history"></i> Historique</button>
   <button class="btn-print" onclick="window.print()"><i class="fas fa-print"></i> Imprimer</button>
@@ -19,3 +53,203 @@
     <div class="history-list" id="historyMaintenanceList"></div>
   </div>
 </div>
+
+  <main>
+    <!-- Blocs Prestataire et Client -->
+    <div class="info-cards">
+      <!-- Prestataire avec logo -->
+      <div class="info-card">
+        <div class="card-header">
+          <i class="fas fa-building"></i>
+          <h3>PRESTATAIRE</h3>
+        </div>
+        <div class="card-body">
+          <div class="logo-upload">
+            <img id="companyLogoPreview" src="#" alt="Logo" style="display: none; max-width: 80px; max-height: 80px; margin-bottom: 10px;">
+            <div class="logo-placeholder" id="companyLogoPlaceholder" style="background: #f0f0f0; border: 2px dashed #ccc; border-radius: 8px; padding: 10px; text-align: center; cursor: pointer;">
+              <i class="fas fa-cloud-upload-alt"></i> Cliquer pour logo
+            </div>
+            <input type="file" id="companyLogoUpload" accept="image/*" style="display: none;">
+          </div>
+          <input type="text" id="companyName" class="info-input company-name" placeholder="Nom de l'entreprise">
+          <input type="text" id="companyAddress" class="info-input" placeholder="Adresse">
+          <input type="text" id="companyExtra" class="info-input" placeholder="Complément d'adresse">
+          <input type="tel" id="companyTel" class="info-input" placeholder="Téléphone">
+        </div>
+      </div>
+
+      <!-- Client -->
+      <div class="info-card client-card">
+        <div class="card-header">
+          <i class="fas fa-user-tie"></i>
+          <h3>CLIENT</h3>
+        </div>
+        <div class="card-body">
+          <input type="text" id="clientName" class="info-input company-name" placeholder="Nom du client">
+          <input type="text" id="clientAddress" class="info-input" placeholder="Adresse">
+          <input type="text" id="clientExtra" class="info-input" placeholder="Complément d'adresse">
+          <input type="tel" id="clientTel" class="info-input" placeholder="Téléphone">
+        </div>
+      </div>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="stats-grid">
+      <div class="stat-card total">
+        <div class="stat-icon"><i class="fas fa-video"></i></div>
+        <div class="stat-content">
+          <span class="stat-label">Total caméras</span>
+          <span class="stat-number" id="totalCameras">0</span>
+        </div>
+      </div>
+      <div class="stat-card fonctionnelle">
+        <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+        <div class="stat-content">
+          <span class="stat-label">Fonctionnelles</span>
+          <span class="stat-number" id="totalFonctionnelles">0</span>
+        </div>
+      </div>
+      <div class="stat-card non-fonctionnelle">
+        <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
+        <div class="stat-content">
+          <span class="stat-label">Non fonctionnelles</span>
+          <span class="stat-number" id="totalNonFonctionnelles">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panneau principal -->
+    <div class="main-panel">
+      <!-- Formulaire d'ajout -->
+      <div class="form-card">
+        <h2><i class="fas fa-plus-circle"></i> Ajouter / modifier une caméra</h2>
+        <form id="cameraForm">
+          <input type="hidden" id="cameraId">
+          <div class="form-group">
+            <label for="cameraName"><i class="fas fa-camera"></i> Nom de la caméra</label>
+            <input type="text" id="cameraName" placeholder="ex: Camera 1" required>
+          </div>
+          <div class="form-group">
+            <label for="emplacement"><i class="fas fa-map-marker-alt"></i> Emplacement</label>
+            <select id="emplacement" required>
+              <option value="">Sélectionner un emplacement</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="etat"><i class="fas fa-clipboard-check"></i> État</label>
+            <select id="etat" required>
+              <option value="Bon">Bon</option>
+              <option value="Pas Bon">Pas Bon</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="probleme"><i class="fas fa-exclamation-circle"></i> Problème(s) identifié(s) (max 3)</label>
+            <div id="problemeCheckboxes" class="checkbox-group"></div>
+          </div>
+          <div class="form-group">
+            <label for="action"><i class="fas fa-wrench"></i> Actions recommandées (max 3)</label>
+            <div id="actionsCheckboxes" class="checkbox-group"></div>
+          </div>
+          <button type="submit" class="btn-submit"><i class="fas fa-save"></i> Enregistrer</button>
+        </form>
+
+        <!-- Configuration des listes -->
+        <div class="config-section">
+          <h3><i class="fas fa-cog"></i> Configuration des listes</h3>
+          <div class="config-item">
+            <label>Nouvel emplacement</label>
+            <div class="config-input-group">
+              <input type="text" id="newEmplacement" placeholder="ex: Toit">
+              <button onclick="addEmplacement()" class="btn-config"><i class="fas fa-plus"></i> Ajouter</button>
+            </div>
+          </div>
+          <div class="config-item">
+            <label>Nouveau problème</label>
+            <div class="config-input-group">
+              <input type="text" id="newProbleme" placeholder="ex: Problème de connexion">
+              <button onclick="addProbleme()" class="btn-config"><i class="fas fa-plus"></i> Ajouter</button>
+            </div>
+          </div>
+          <div class="config-item">
+            <label>Nouvelle action</label>
+            <div class="config-input-group">
+              <input type="text" id="newAction" placeholder="ex: Réparation urgente">
+              <button onclick="addAction()" class="btn-config"><i class="fas fa-plus"></i> Ajouter</button>
+            </div>
+          </div>
+          <div class="config-item">
+            <label>Note pour état Bon (utilisée dans la facture)</label>
+            <textarea id="bonNote" rows="3" placeholder="Saisissez la note par défaut pour les caméras en état Bon">Nettoyage des objectifs, Réglage des angles de vue, Mise à jour du firmware des caméras, Vérification enregistreurs NVR</textarea>
+          </div>
+          <button onclick="resetToDefault()" class="btn-reset"><i class="fas fa-undo-alt"></i> Réinitialiser</button>
+          <button id="createInvoiceBtn" class="btn-invoice"><i class="fas fa-file-invoice"></i> Créer une facture</button>
+        </div>
+      </div>
+
+      <!-- Tableau des caméras -->
+      <div class="table-card">
+        <div class="table-header">
+          <h2><i class="fas fa-list"></i> Liste des caméras</h2>
+        </div>
+        <div class="table-responsive">
+          <table id="camerasTable">
+            <thead>
+              <tr>
+                <th></th>
+                <th>Caméra</th>
+                <th>Emplacement</th>
+                <th>État</th>
+                <th>Problème(s)</th>
+                <th>Actions recommandées</th>
+                <th>Gestion</th>
+              </tr>
+            </thead>
+            <tbody id="camerasTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p><i class="far fa-save"></i> Sauvegarde automatique activée</p>
+  </footer>
+
+  <!-- Toast -->
+  <div class="toast-notification" id="toast"></div>
+
+  <script src="../assets/js/shared.js"></script>
+  <script src="script.js"></script>
+  <script>
+    // Gestion du thème de couleur (identique à toutes les pages)
+    (function() {
+      const colorInput = document.getElementById('themeColor');
+      const root = document.documentElement;
+
+      function lightenDarkenColor(col, percent) {
+        let R = parseInt(col.substring(1,3),16);
+        let G = parseInt(col.substring(3,5),16);
+        let B = parseInt(col.substring(5,7),16);
+        R = Math.min(255, Math.max(0, R + percent));
+        G = Math.min(255, Math.max(0, G + percent));
+        B = Math.min(255, Math.max(0, B + percent));
+        return '#' + (R < 16 ? '0' : '') + R.toString(16) + (G < 16 ? '0' : '') + G.toString(16) + (B < 16 ? '0' : '') + B.toString(16);
+      }
+
+      const savedColor = localStorage.getItem('themePrimary');
+      if (savedColor) {
+        root.style.setProperty('--primary', savedColor);
+        root.style.setProperty('--secondary', lightenDarkenColor(savedColor, 30));
+        colorInput.value = savedColor;
+      }
+
+      colorInput.addEventListener('input', function(e) {
+        const primary = e.target.value;
+        root.style.setProperty('--primary', primary);
+        root.style.setProperty('--secondary', lightenDarkenColor(primary, 30));
+        localStorage.setItem('themePrimary', primary);
+      });
+    })();
+  </script>
+</body>
+</html>
