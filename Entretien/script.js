@@ -699,7 +699,35 @@
       }
     });
   }
+// Nouveau rapport
+const newReportBtn = document.getElementById('btnNewReport');
+if (newReportBtn) {
+  newReportBtn.addEventListener('click', function() {
+    if (confirm('Créer un nouveau rapport ? Les données actuelles seront sauvegardées.')) {
+      // Sauvegarder l'état actuel (optionnel, mais prudent)
+      saveToLocalStorage(true);
 
+      // Réinitialiser le formulaire
+      document.getElementById('cameraForm').reset();
+      cameraId.value = '';
+
+      // Réinitialiser les cases à cocher
+      renderProblemeCheckboxes();
+      renderActionsCheckboxes();
+
+      // Optionnel : vider les informations client (mais pas le prestataire)
+      clientName.value = '';
+      clientAddress.value = '';
+      clientExtra.value = '';
+      clientTel.value = '';
+
+      // Re-rendre le tableau (inchangé)
+      renderCameras();
+
+      showToast('Nouveau rapport prêt.', 'success');
+    }
+  });
+}
   // Initialisation
   function init() {
     companyName.value = company.name || '';
@@ -724,3 +752,4 @@
 
   init();
 })();
+
