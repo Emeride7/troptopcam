@@ -116,8 +116,16 @@
   const bonNoteTextarea = document.getElementById('bonNote');
   const toast = document.getElementById('toast');
 
+  // Nouveaux éléments pour l'historique
+  const historyBtn = document.getElementById('btnHistoryMaintenance');
+  const historyOverlay = document.getElementById('historyMaintenanceOverlay');
+  const historyCloseBtn = document.getElementById('btnCloseHistoryMaintenance');
+  const historySearch = document.getElementById('historyMaintenanceSearch');
+  const historyList = document.getElementById('historyMaintenanceList');
+
   // Vérification des éléments essentiels
   if (!createInvoiceBtn) console.error("Bouton #createInvoiceBtn introuvable !");
+  if (!historyBtn) console.error("Bouton #btnHistoryMaintenance introuvable !");
 
   // Initialiser la zone de texte de la note Bon
   if (bonNoteTextarea) bonNoteTextarea.value = bonNote;
@@ -498,6 +506,157 @@
     }
   });
 
+  // ==================== HISTORIQUE DES RAPPORTS ====================
+  const STORAGE_REPORTS = 'maintenanceReports.v2';
+
+  // Sauvegarder le rapport actuel dans l'historique
+  function archiveCurrentReport() {
+    const report = {
+      id: uid(),
+      date: todayISO(),
+      savedAt: new Date().toISOString(),
+      client: {
+        name: client.name,
+        address: client.address,
+        extra: client.extra,
+        tel: client.tel
+      },
+      cameras: cameras.map(c => ({
+        id: c.id,
+        name: c.name,
+        emplacement: c.emplacement,
+        etat: c.etat,
+        problemes: [...c.problemes],
+        actions: [...c.actions]
+      }))
+    };
+
+    const reports = storage.get(STORAGE_REPORTS, []);
+    reports.unshift(report); // Ajouter en tête
+    if (reports.length > 50) reports.pop(); // Garder 50 max
+    storage.set(STORAGE_REPORTS, reports);
+    showToast('Rapport archivé.', 'success');
+    return report;
+  }
+
+  // Charger un rapport depuis l'historique
+  function loadReport(report) {
+    if (!report) return;
+    
+    // Restaurer le client
+    client.name = report.client?.name || '';
+    client.address = report.client?.address || '';
+    client.extra = report.client?.extra || '';
+    client.tel = report.client?.tel || '';
+    
+    clientName.value = client.name;
+    clientAddress.value = client.address;
+    clientExtra.value = client.extra;
+    clientTel.value = client.tel;
+
+    // Restaurer les caméras
+    cameras = (report.cameras || []).map(c => ({
+      ...c,
+      problemes: c.problemes || [],
+      actions: c.actions || [],
+      lastModified: new Date().toISOString()
+    }));
+
+    renderCameras();
+    saveToLocalStorage(true);
+    showToast('Rapport chargé.', 'success');
+  }
+
+  // Afficher le panneau d'historique
+  function openHistoryMaintenance() {
+    renderHistoryMaintenance();
+    if (historyOverlay) historyOverlay.classList.add('open');
+  }
+
+  function closeHistoryMaintenance() {
+    if (historyOverlay) historyOverlay.classList.remove('open');
+  }
+
+  // Rendu de la liste des rapports
+  function renderHistoryMaintenance() {
+    if (!historyList) return;
+
+    const q = (historySearch?.value || '').trim().toLowerCase();
+    const reports = storage.get(STORAGE_REPORTS, []);
+    const filtered = q ? reports.filter(r => 
+      r.client?.name?.toLowerCase().includes(q) ||
+      r.date?.includes(q)
+    ) : reports;
+
+    historyList.innerHTML = '';
+
+    if (filtered.length === 0) {
+      historyList.innerHTML = '<div class="history-empty">Aucun rapport sauvegardé.</div>';
+      return;
+    }
+
+    filtered.forEach((report, idx) => {
+      const date = new Date(report.savedAt).toLocaleString('fr-FR');
+      const card = document.createElement('div');
+      card.className = 'history-item';
+      card.innerHTML = `
+        <div class="hi-title">Rapport du ${report.date}</div>
+        <div class="hi-sub">Client : ${report.client?.name || 'Inconnu'}</div>
+        <div class="hi-sub">Caméras : ${report.cameras?.length || 0}</div>
+        <div class="hi-sub">Sauvegardé : ${date}</div>
+        <div class="history-item-actions">
+          <button class="btn-load" data-index="${idx}">Charger</button>
+          <button class="btn-del-hist" data-index="${idx}">Supprimer</button>
+        </div>
+      `;
+      historyList.appendChild(card);
+    });
+
+    // Attacher les événements après création
+    historyList.querySelectorAll('.btn-load').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const index = e.target.dataset.index;
+        const reports = storage.get(STORAGE_REPORTS, []);
+        const report = reports[index];
+        if (report && confirm('Charger ce rapport ? Les données actuelles seront remplacées.')) {
+          loadReport(report);
+          closeHistoryMaintenance();
+        }
+      });
+    });
+
+    historyList.querySelectorAll('.btn-del-hist').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const index = e.target.dataset.index;
+        const reports = storage.get(STORAGE_REPORTS, []);
+        const report = reports[index];
+        if (report && confirm(`Supprimer le rapport du ${report.date} ?`)) {
+          reports.splice(index, 1);
+          storage.set(STORAGE_REPORTS, reports);
+          renderHistoryMaintenance();
+        }
+      });
+    });
+  }
+
+  // Initialisation des événements de l'historique
+  if (historyBtn) {
+    historyBtn.addEventListener('click', openHistoryMaintenance);
+  }
+  if (historyCloseBtn) {
+    historyCloseBtn.addEventListener('click', closeHistoryMaintenance);
+  }
+  if (historySearch) {
+    historySearch.addEventListener('input', renderHistoryMaintenance);
+  }
+
+  // Fermeture en cliquant à l'extérieur
+  document.addEventListener('click', (e) => {
+    if (historyOverlay && e.target === historyOverlay) {
+      closeHistoryMaintenance();
+    }
+  });
+
   // Création d'une facture à partir du rapport (AVEC REGROUPEMENT)
   if (createInvoiceBtn) {
     createInvoiceBtn.addEventListener('click', function() {
@@ -558,6 +717,35 @@
       setTimeout(() => {
         window.location.href = '../Facture/';
       }, 1500);
+    });
+  }
+
+  // Nouveau rapport (avec archivage automatique)
+  const newReportBtn = document.getElementById('btnNewReport');
+  if (newReportBtn) {
+    newReportBtn.addEventListener('click', function() {
+      if (confirm('Créer un nouveau rapport ? Le rapport actuel sera sauvegardé dans l\'historique.')) {
+        archiveCurrentReport(); // Sauvegarde dans l'historique
+        
+        // Réinitialiser le formulaire
+        document.getElementById('cameraForm').reset();
+        cameraId.value = '';
+
+        renderProblemeCheckboxes();
+        renderActionsCheckboxes();
+
+        // Vider les infos client
+        clientName.value = '';
+        clientAddress.value = '';
+        clientExtra.value = '';
+        clientTel.value = '';
+        client.name = client.address = client.extra = client.tel = '';
+
+        cameras = []; // Vider les caméras
+        renderCameras();
+        saveToLocalStorage(true);
+        showToast('Nouveau rapport prêt.', 'success');
+      }
     });
   }
 
@@ -699,35 +887,7 @@
       }
     });
   }
-// Nouveau rapport
-const newReportBtn = document.getElementById('btnNewReport');
-if (newReportBtn) {
-  newReportBtn.addEventListener('click', function() {
-    if (confirm('Créer un nouveau rapport ? Les données actuelles seront sauvegardées.')) {
-      // Sauvegarder l'état actuel (optionnel, mais prudent)
-      saveToLocalStorage(true);
 
-      // Réinitialiser le formulaire
-      document.getElementById('cameraForm').reset();
-      cameraId.value = '';
-
-      // Réinitialiser les cases à cocher
-      renderProblemeCheckboxes();
-      renderActionsCheckboxes();
-
-      // Optionnel : vider les informations client (mais pas le prestataire)
-      clientName.value = '';
-      clientAddress.value = '';
-      clientExtra.value = '';
-      clientTel.value = '';
-
-      // Re-rendre le tableau (inchangé)
-      renderCameras();
-
-      showToast('Nouveau rapport prêt.', 'success');
-    }
-  });
-}
   // Initialisation
   function init() {
     companyName.value = company.name || '';
@@ -752,4 +912,3 @@ if (newReportBtn) {
 
   init();
 })();
-
