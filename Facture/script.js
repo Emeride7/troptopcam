@@ -17,8 +17,13 @@
     draftId: uid(),
     _saveTimer: null,
     lastFocused: null,
-    archiveButtonDisabled: false
+    archiveButtonDisabled: false,
+    draggedRow: null
   };
+
+  // Helper pour sélection
+  function $(sel, root = document) { return root.querySelector(sel); }
+  function $$(sel, root = document) { return Array.from(root.querySelectorAll(sel)); }
 
   // Références DOM
   const refs = {
@@ -58,13 +63,14 @@
     toast: $('#toast')
   };
 
-  // Helper pour sélection
-  function $(sel, root = document) { return root.querySelector(sel); }
-  function $$(sel, root = document) { return Array.from(root.querySelectorAll(sel)); }
+  // Vérification des éléments essentiels
+  if (!refs.addRow) console.error("Bouton #addRow introuvable !");
+  if (!refs.itemsBody) console.error("tbody #itemsBody introuvable !");
 
   // Notification toast
   function showToast(msg, type = 'info', duration = 2500) {
     const t = refs.toast;
+    if (!t) return;
     t.textContent = msg;
     t.style.background = type === 'error' ? '#7f1d1d' : type === 'success' ? '#14532d' : 'var(--primary)';
     t.classList.add('show');
@@ -72,12 +78,13 @@
     showToast._timer = setTimeout(() => t.classList.remove('show'), duration);
   }
 
-  // Création d'une ligne d'article avec note
+  // Création d'une ligne d'article avec note et poignée
   function createItemRow(item) {
     const tr = document.createElement('tr');
     tr.dataset.itemId = item.id || uid();
+    tr.draggable = true;
 
-    // Colonne poignée
+    // Poignée
     const tdDrag = document.createElement('td');
     tdDrag.className = 'drag-handle';
     tdDrag.innerHTML = '<i class="fas fa-grip-vertical"></i>';
@@ -143,7 +150,7 @@
     const btnDel = document.createElement('button');
     btnDel.type = 'button';
     btnDel.className = 'remove-row-btn';
-    btnDel.textContent = 'Suppr.';
+    btnDel.innerHTML = '<i class="fas fa-trash"></i> Suppr.';
     btnDel.setAttribute('data-action', 'remove-row');
     tdActions.appendChild(btnDel);
     tr.appendChild(tdActions);
@@ -166,21 +173,18 @@
   }
 
   function ensureAtLeastOneRow() {
-    if (refs.itemsBody.children.length === 0) {
+    if (!refs.itemsBody || refs.itemsBody.children.length === 0) {
       addItemRow({ id: uid(), description: '', note: '', qty: 1, price: 0 });
     }
   }
 
-  // Variables pour le drag & drop
-  let draggedRow = null;
-
+  // Drag & drop
   function handleDragStart(e) {
-    const target = e.target;
-    if (!target.closest('.drag-handle')) {
+    if (!e.target.closest('.drag-handle')) {
       e.preventDefault();
       return false;
     }
-    draggedRow = this;
+    state.draggedRow = this;
     e.dataTransfer.effectAllowed = 'move';
     this.style.opacity = '0.5';
   }
@@ -189,14 +193,14 @@
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     const targetRow = this;
-    if (targetRow !== draggedRow && targetRow.tagName === 'TR') {
+    if (targetRow !== state.draggedRow && targetRow.tagName === 'TR') {
       const rect = targetRow.getBoundingClientRect();
       const next = (e.clientY - rect.top) > (rect.height / 2);
       const tbody = targetRow.parentNode;
       if (next) {
-        tbody.insertBefore(draggedRow, targetRow.nextSibling);
+        tbody.insertBefore(state.draggedRow, targetRow.nextSibling);
       } else {
-        tbody.insertBefore(draggedRow, targetRow);
+        tbody.insertBefore(state.draggedRow, targetRow);
       }
     }
   }
@@ -209,7 +213,7 @@
 
   function handleDragEnd(e) {
     this.style.opacity = '1';
-    draggedRow = null;
+    state.draggedRow = null;
   }
 
   // Calculs
@@ -224,11 +228,11 @@
   }
 
   function updateTotals() {
+    if (!refs.itemsBody) return;
     for (const tr of refs.itemsBody.rows) {
       const qty = clampNumber(tr.querySelector('[data-field="qty"]').value);
       const price = clampNumber(tr.querySelector('[data-field="price"]').value);
-      const line = qty * price;
-      tr.querySelector('.line-total-cell').textContent = fmtMoney.format(line);
+      tr.querySelector('.line-total-cell').textContent = fmtMoney.format(qty * price);
     }
 
     const subtotal = computeSubtotal();
@@ -253,13 +257,15 @@
   // Mode et numérotation
   function setMode(mode) {
     state.mode = mode;
-    refs.docTitle.textContent = mode === 'facture' ? 'FACTURE' : 'PRO FORMA';
-    refs.clientSectionLabel.textContent = mode === 'facture' ? 'FACTURÉ À' : 'CLIENT';
+    if (refs.docTitle) refs.docTitle.textContent = mode === 'facture' ? 'FACTURE' : 'PRO FORMA';
+    if (refs.clientSectionLabel) refs.clientSectionLabel.textContent = mode === 'facture' ? 'FACTURÉ À' : 'CLIENT';
 
-    refs.btnProforma.classList.toggle('active', mode === 'proforma');
-    refs.btnFacture.classList.toggle('active', mode === 'facture');
-    refs.btnProforma.setAttribute('aria-selected', String(mode === 'proforma'));
-    refs.btnFacture.setAttribute('aria-selected', String(mode === 'facture'));
+    if (refs.btnProforma && refs.btnFacture) {
+      refs.btnProforma.classList.toggle('active', mode === 'proforma');
+      refs.btnFacture.classList.toggle('active', mode === 'facture');
+      refs.btnProforma.setAttribute('aria-selected', String(mode === 'proforma'));
+      refs.btnFacture.setAttribute('aria-selected', String(mode === 'facture'));
+    }
 
     const v = (refs.docNumber.value || '').trim();
     if (v) {
@@ -290,9 +296,7 @@
 
   function generateNextNumber(mode) {
     let counters = storage.get(STORAGE.counters, {});
-    if (typeof counters !== 'object' || counters === null) {
-      counters = {};
-    }
+    if (typeof counters !== 'object' || counters === null) counters = {};
     const year = getYearForCounter();
     const key = `${mode}-${year}`;
     const next = (counters[key] || 0) + 1;
@@ -302,7 +306,7 @@
     return `${prefix}-${year}-${pad3(next)}`;
   }
 
-  // Collecte des données
+  // Collecte et application des données
   function collectData() {
     const items = [];
     for (const tr of refs.itemsBody.rows) {
@@ -342,10 +346,10 @@
 
   function applyData(data) {
     state.draftId = data?.id || uid();
-    
+
     refs.docNumber.value = data?.docNumber || '';
     setMode(data?.mode || 'proforma');
-    
+
     refs.docDate.value = data?.docDate || todayISO();
 
     refs.emitterName.value = data?.emitter?.name || '';
@@ -397,7 +401,7 @@
   function saveDraft() {
     const ok = storage.set(STORAGE.draft, collectData());
     refs.footerBrand.textContent = refs.emitterName.value || 'Votre entreprise';
-    if (!ok) showToast('⚠️ Impossible de sauvegarder (quota ou mode privé).', 'error', 3200);
+    if (!ok) showToast('⚠️ Sauvegarde impossible (quota ou mode privé).', 'error', 3200);
     updateStoredClientsAndItems();
   }
 
@@ -405,17 +409,17 @@
     const d = storage.get(STORAGE.draft, null);
     if (d) {
       applyData(d);
-      return;
+    } else {
+      applyData({
+        id: uid(),
+        mode: 'proforma',
+        docDate: todayISO(),
+        docNumber: generateNextNumber('proforma'),
+        vatRate: 18,
+        currency: 'CFA',
+        items: [{ id: uid(), description: '', note: '', qty: 1, price: 0 }]
+      });
     }
-    applyData({
-      id: uid(),
-      mode: 'proforma',
-      docDate: todayISO(),
-      docNumber: generateNextNumber('proforma'),
-      vatRate: 18,
-      currency: 'CFA',
-      items: [{ id: uid(), description: '', note: '', qty: 1, price: 0 }]
-    });
   }
 
   // Chargement des données en attente depuis l'entretien
@@ -646,7 +650,7 @@
     const margin = 15;
 
     doc.setFillColor(30, 60, 114);
-    doc.rect(0, 0, pageW, 35, 'F'); // Bandeau un peu réduit
+    doc.rect(0, 0, pageW, 35, 'F');
 
     let logoEndX = margin;
     if (state.logoDataURL) {
@@ -664,6 +668,7 @@
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
     doc.text(refs.emitterName.value || 'Votre entreprise', logoEndX, 12);
+
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.text(refs.emitterAddress.value || '', logoEndX, 18);
@@ -674,6 +679,7 @@
     doc.setFontSize(18);
     const title = refs.docTitle.textContent;
     doc.text(title, pageW - margin, 12, { align: 'right' });
+
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.text(`N° ${refs.docNumber.value}`, pageW - margin, 20, { align: 'right' });
@@ -694,6 +700,7 @@
     doc.setTextColor(10, 10, 40);
     doc.setFontSize(9.5);
     doc.text(refs.clientName.value || '', margin + 4, y + 13);
+
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.5);
     doc.text(refs.clientAddress.value || '', margin + 4, y + 19);
@@ -861,5 +868,297 @@
     refs.docNumber.value = generateNextNumber('proforma');
 
     refs.clientName.value = '';
-    ref
+    refs.clientAddress.value = '';
+    refs.clientExtra.value = '';
+    refs.clientIfu.value = '';
 
+    refs.itemsBody.innerHTML = '';
+    addItemRow({ id: uid(), description: '', note: '', qty: 1, price: 0 }, { focus: true });
+
+    updateCurrencyDisplay();
+    updateTotals();
+    saveDraft();
+
+    showToast('Nouveau document prêt.', 'success');
+  }
+
+  // Autocomplétion clients / articles
+  const STORAGE_CLIENTS = 'invoiceClients.v2';
+  const STORAGE_ITEMS = 'invoiceItems.v2';
+
+  function updateStoredClientsAndItems() {
+    const clients = storage.get(STORAGE_CLIENTS, []);
+    const items = storage.get(STORAGE_ITEMS, []);
+
+    const clientName = refs.clientName.value.trim();
+    if (clientName) {
+      const clientData = {
+        name: clientName,
+        address: refs.clientAddress.value.trim(),
+        extra: refs.clientExtra.value.trim(),
+        ifu: refs.clientIfu.value.trim()
+      };
+      const idx = clients.findIndex(c => c.name.toLowerCase() === clientName.toLowerCase());
+      if (idx >= 0) clients[idx] = clientData;
+      else clients.unshift(clientData);
+      if (clients.length > 50) clients.pop();
+    }
+
+    const seenDescriptions = new Set();
+    for (const tr of refs.itemsBody.rows) {
+      const desc = tr.querySelector('[data-field="description"]').value.trim();
+      if (!desc) continue;
+      if (seenDescriptions.has(desc)) continue;
+      seenDescriptions.add(desc);
+
+      const price = clampNumber(tr.querySelector('[data-field="price"]').value);
+      if (price > 0) {
+        const itemData = { description: desc, price };
+        const idx = items.findIndex(i => i.description.toLowerCase() === desc.toLowerCase());
+        if (idx >= 0) items[idx] = itemData;
+        else items.unshift(itemData);
+      }
+    }
+    if (items.length > 100) items.length = 100;
+
+    storage.set(STORAGE_CLIENTS, clients);
+    storage.set(STORAGE_ITEMS, items);
+    renderClientDatalist();
+    renderItemDatalist();
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"]/g, function(m) {
+      if (m === '&') return '&amp;';
+      if (m === '<') return '&lt;';
+      if (m === '>') return '&gt;';
+      if (m === '"') return '&quot;';
+      return m;
+    });
+  }
+
+  function renderClientDatalist() {
+    let datalist = $('#clientDatalist');
+    if (!datalist) {
+      datalist = document.createElement('datalist');
+      datalist.id = 'clientDatalist';
+      document.body.appendChild(datalist);
+      refs.clientName.setAttribute('list', 'clientDatalist');
+    }
+    const clients = storage.get(STORAGE_CLIENTS, []);
+    datalist.innerHTML = clients.map(c => `<option value="${escapeHtml(c.name)}">`).join('');
+  }
+
+  function renderItemDatalist() {
+    let datalist = $('#itemDatalist');
+    if (!datalist) {
+      datalist = document.createElement('datalist');
+      datalist.id = 'itemDatalist';
+      document.body.appendChild(datalist);
+    }
+    const items = storage.get(STORAGE_ITEMS, []);
+    datalist.innerHTML = items.map(i => `<option value="${escapeHtml(i.description)}">`).join('');
+    $$('#itemsBody [data-field="description"]').forEach(inp => inp.setAttribute('list', 'itemDatalist'));
+  }
+
+  function fillClientFromName(clientName) {
+    const clients = storage.get(STORAGE_CLIENTS, []);
+    const client = clients.find(c => c.name.toLowerCase() === clientName.toLowerCase());
+    if (client) {
+      refs.clientName.value = client.name;
+      refs.clientAddress.value = client.address || '';
+      refs.clientExtra.value = client.extra || '';
+      refs.clientIfu.value = client.ifu || '';
+      scheduleSave();
+    }
+  }
+
+  function fillItemPriceFromDescription(descInput) {
+    const desc = descInput.value.trim();
+    if (!desc) return;
+    const items = storage.get(STORAGE_ITEMS, []);
+    const item = items.find(i => i.description.toLowerCase() === desc.toLowerCase());
+    if (item) {
+      const row = descInput.closest('tr');
+      if (row) {
+        const priceInput = row.querySelector('[data-field="price"]');
+        if (priceInput) {
+          priceInput.value = item.price;
+          updateTotals();
+          scheduleSave();
+        }
+      }
+    }
+  }
+
+  function setupPhoneValidation() {
+    const phoneInput = refs.emitterTel;
+    phoneInput.addEventListener('input', function(e) {
+      let val = this.value;
+      val = val.replace(/[^\d+]/g, '');
+      if (val.indexOf('+') > 0) val = val.replace(/\+/g, '');
+      if (val.startsWith('+')) {
+        val = '+' + val.slice(1).replace(/\+/g, '');
+      }
+      this.value = val;
+    });
+    phoneInput.addEventListener('blur', function() {
+      if (!this.value.trim()) {
+        this.value = '+229';
+      } else if (!this.value.startsWith('+')) {
+        this.value = '+229' + this.value.replace(/^\+?/, '');
+      }
+    });
+    if (!phoneInput.value) phoneInput.value = '+229';
+  }
+
+  // Gestionnaires d'événements
+  function bindEvents() {
+    if (refs.btnProforma) refs.btnProforma.addEventListener('click', () => setMode('proforma'));
+    if (refs.btnFacture) refs.btnFacture.addEventListener('click', () => setMode('facture'));
+
+    if (refs.btnHistory) {
+      refs.btnHistory.addEventListener('click', () => {
+        if (refs.historyOverlay.classList.contains('open')) {
+          closeHistory();
+        } else {
+          openHistory();
+        }
+      });
+    }
+
+    if (refs.btnArchive) {
+      refs.btnArchive.addEventListener('click', () => {
+        if (state.archiveButtonDisabled) return;
+        state.archiveButtonDisabled = true;
+        archiveCurrentDocument();
+        setTimeout(() => { state.archiveButtonDisabled = false; }, 1000);
+      });
+    }
+
+    if (refs.btnNew) refs.btnNew.addEventListener('click', newDocument);
+    if (refs.btnPdf) refs.btnPdf.addEventListener('click', exportPDF);
+    if (refs.btnExcel) refs.btnExcel.addEventListener('click', exportExcel);
+
+    if (refs.btnCloseHistory) refs.btnCloseHistory.addEventListener('click', closeHistory);
+    if (refs.historyOverlay) {
+      refs.historyOverlay.addEventListener('click', (e) => {
+        if (e.target === refs.historyOverlay) closeHistory();
+      });
+    }
+    if (refs.historySearch) refs.historySearch.addEventListener('input', renderHistory);
+
+    if (refs.addRow) {
+      refs.addRow.addEventListener('click', () => {
+        addItemRow({ id: uid(), description: '', note: '', qty: 1, price: 0 }, { focus: true });
+      });
+    }
+
+    if (refs.itemsBody) {
+      refs.itemsBody.addEventListener('input', (e) => {
+        const field = e.target?.getAttribute?.('data-field');
+        if (!field) return;
+        if (field === 'qty' || field === 'price') {
+          const v = clampNumber(e.target.value);
+          e.target.value = String(v);
+        }
+        updateTotals();
+        scheduleSave();
+      });
+
+      refs.itemsBody.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action="remove-row"]');
+        if (!btn) return;
+        const tr = btn.closest('tr');
+        if (!tr) return;
+        tr.remove();
+        ensureAtLeastOneRow();
+        updateTotals();
+        scheduleSave();
+      });
+    }
+
+    [
+      refs.emitterName, refs.emitterAddress, refs.emitterExtra, refs.emitterTel,
+      refs.clientName, refs.clientAddress, refs.clientExtra, refs.clientIfu,
+      refs.docNumber, refs.docDate,
+      refs.currency, refs.vatRate
+    ].forEach(el => {
+      if (el) {
+        el.addEventListener('input', (e) => {
+          if (e.target.id === 'currency') updateCurrencyDisplay();
+          if (e.target.id === 'vatRate') updateTotals();
+          if (e.target.id === 'emitterName') refs.footerBrand.textContent = refs.emitterName.value || 'Votre entreprise';
+          if (e.target.id === 'docDate') {
+            const cur = (refs.docNumber.value || '').trim();
+            if (/^(PF|F)-\d{4}-\d{3,}$/i.test(cur)) {
+              refs.docNumber.value = normalizeDocNumber(cur.replace(/-(\d{4})-/, `-${getYearForCounter()}-`), state.mode);
+            }
+          }
+          scheduleSave();
+        });
+      }
+    });
+
+    if (refs.logoUpload) {
+      refs.logoUpload.addEventListener('change', async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        try {
+          const dataUrl = await downscaleImageToDataURL(file, { max: 360, quality: 0.86 });
+          state.logoDataURL = dataUrl;
+          refs.logoPreview.src = dataUrl;
+          refs.logoPreview.style.display = 'block';
+          refs.logoPlaceholder.style.display = 'none';
+          scheduleSave();
+          showToast('Logo ajouté.', 'success');
+        } catch {
+          showToast('Impossible de charger le logo.', 'error');
+        }
+      });
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && refs.historyOverlay.classList.contains('open')) closeHistory();
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        saveDraft();
+        showToast('Brouillon sauvegardé.', 'success');
+      }
+    });
+
+    if (refs.clientName) {
+      refs.clientName.addEventListener('change', function() {
+        fillClientFromName(this.value);
+      });
+    }
+
+    if (refs.itemsBody) {
+      refs.itemsBody.addEventListener('change', function(e) {
+        if (e.target.matches('[data-field="description"]')) {
+          fillItemPriceFromDescription(e.target);
+        }
+      });
+    }
+  }
+
+  // Initialisation
+  function init() {
+    bindEvents();
+    loadDraft();
+    loadPendingInvoiceData(); // Charge les données de l'entretien si présentes
+    updateCurrencyDisplay();
+    updateTotals();
+    renderClientDatalist();
+    renderItemDatalist();
+    setupPhoneValidation();
+    scheduleSave();
+  }
+
+  // Attendre que le DOM soit prêt
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
