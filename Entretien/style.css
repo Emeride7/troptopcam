@@ -859,4 +859,258 @@ footer {
     transform: translateX(0);
   }
 }
+/* ===== VERSION MOBILE (AJOUT) ===== */
+@media (max-width: 768px) {
+  /* Navigation */
+  .nav-container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .nav-links {
+    width: 100%;
+    justify-content: space-between;
+    gap: 0.3rem;
+  }
+
+  .nav-links a {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+  }
+
+  .color-picker {
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  /* Toolbar */
+  .toolbar {
+    top: 110px; /* Ajusté pour la navbar plus haute */
+    padding: 0.8rem 1rem;
+  }
+
+  .brand {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .toolbar-actions {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .toolbar-actions button {
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+  }
+
+  /* Main content */
+  main {
+    padding: 1rem;
+    margin-top: 1rem;
+  }
+
+  /* Info cards */
+  .info-cards {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .card-body {
+    padding: 1rem;
+  }
+
+  .info-input {
+    padding: 0.7rem;
+    font-size: 16px; /* Évite le zoom automatique sur iOS */
+  }
+
+  /* Statistiques */
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 0.8rem;
+  }
+
+  .stat-card {
+    padding: 1rem;
+  }
+
+  .stat-icon {
+    width: 50px;
+    height: 50px;
+    font-size: 1.5rem;
+  }
+
+  .stat-number {
+    font-size: 1.8rem;
+  }
+
+  /* Panneau principal (passe en colonne) */
+  .main-panel {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  /* Formulaire */
+  .form-card {
+    padding: 1.2rem;
+  }
+
+  .form-card h2 {
+    font-size: 1.2rem;
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .checkbox-group {
+    max-height: 200px;
+  }
+
+  /* Configuration */
+  .config-input-group {
+    flex-direction: column;
+  }
+
+  .btn-config {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Tableau */
+  .table-card {
+    padding: 1rem;
+    overflow-x: hidden;
+  }
+
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    min-width: 700px; /* Force le défilement horizontal si nécessaire */
+  }
+
+  th, td {
+    padding: 0.8rem 0.5rem;
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .action-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Historique */
+  .history-panel {
+    width: 100%;
+  }
+
+  .history-item {
+    padding: 1rem;
+  }
+
+  .history-item-actions {
+    flex-direction: column;
+  }
+
+  .btn-load, .btn-del-hist {
+    width: 100%;
+  }
+
+  /* Toast */
+  .toast-notification {
+    left: 10px;
+    right: 10px;
+    transform: translateY(20px);
+    width: auto;
+    text-align: center;
+    border-radius: 40px;
+  }
+
+  .toast-notification.show {
+    transform: translateY(0);
+  }
+
+  /* Footer */
+  footer {
+    padding: 1.5rem 1rem;
+    font-size: 0.8rem;
+  }
+}
+
+/* Pour les très petits écrans (moins de 480px) */
+@media (max-width: 480px) {
+  .nav-links {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .nav-links a {
+    flex: 1 1 auto;
+    text-align: center;
+    justify-content: center;
+  }
+
+  .toolbar-actions {
+    flex-wrap: wrap;
+  }
+
+  .toolbar-actions button {
+    flex: 1 1 auto;
+    min-width: 120px;
+  }
+
+  .stat-card {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .stat-icon {
+    margin-bottom: 0.5rem;
+  }
+
+  .stat-content {
+    text-align: center;
+  }
+
+  .form-group label {
+    font-size: 0.8rem;
+  }
+
+  .btn-submit, .btn-invoice {
+    padding: 0.8rem;
+    font-size: 0.95rem;
+  }
+}
+
+/* Optimisation pour les tablettes */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .main-panel {
+    grid-template-columns: 350px 1fr;
+  }
+
+  .stats-grid {
+    gap: 1rem;
+  }
+
+  .stat-card {
+    padding: 1rem;
+  }
+
+  .stat-number {
+    font-size: 1.8rem;
+  }
+}
+
 
